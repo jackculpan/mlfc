@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css" integrity="sha384-HSMxcRTRxnN+Bdg0JdbxYKrThecOKuH5zCYotlSAcp1+c8xmyTe9GYg1l9a69psu" crossorigin="anonymous">
+    <title>MLFC</title>
+  </head>
+  <body>
+    <div class="container">
+      <div class="row" align="center">
+        <h1> MLFC - Predicting Fantasy Football with Machine Learning </h1>
+        <h3> Jack Culpan | Student Number: 089004 </h3>
+        <br><br>
+        <form action="{{ url_for('main') }}" method="POST">
+          <fieldset>
+            <p>Please enter your FPL login details to retrieve the team</p>
+            <input type="text" name='email' placeholder="email">
+            <input type="password" name='password' placeholder="password">
+            <input type="int" name='user_id' placeholder="team_id">
+            <input type="Submit">
+          </fieldset>
+        </form>
+        <br>
+        <div class="result" align="center">
+          {% if result %}
+              <br>
+              <br> <h2> Here's your team: </h2>
+              {% for prediction in predictions %}
+                  <ul >{{ prediction[0] }} -> {{ prediction[1] }}  </ul>
+              {% endfor %}
+
+              <!-- {% for player in goalkeepers %}
+                  <ul >{{ player }} -> {{ prediction }}  </ul>
+              {% endfor %}
+
+              {% for player in defenders %}
+                  <ul>{{ player }} -> 5 </ul>
+              {% endfor %}
+
+              {% for player in midfielders %}
+                  <ul>{{ player }} -> 7 </ul>
+              {% endfor %}
+
+              {% for player in strikers %}
+                  <ul>{{ player }} -> 10 </ul>
+              {% endfor %} -->
+
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
+
+
