@@ -9,7 +9,6 @@ itsdangerous==0.24
 Jinja2==2.10.1
 MarkupSafe==1.0
 pandas==0.24.2
-pickle==4.0
 Pygments==2.2.0
 pymongo[tls,srv]==3.10.1
 schedule==0.6.0
