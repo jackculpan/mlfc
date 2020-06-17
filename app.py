@@ -34,22 +34,26 @@ def main():
     password = flask.request.form['password']
     user_id = flask.request.form['user_id']
     session = authenticate(session, email, password)
+
     team_info = get_team(session, user_id)
     chips = [{"name":team_info['chips'][i]['name'], "value":team_info['chips'][i]['status_for_entry']} for i in range(len(team_info['chips']))]
+
     latest_teams = players_df[players_df['season'] == 19]
     latest_teams = latest_teams[latest_teams['round']==max(latest_teams['round'])]
     players = [latest_teams[latest_teams['id']==team_info['picks'][i]['element']] for i in range(len(team_info['picks']))]
     players = pd.concat(players)
+
+
     predictions=[]
     players['prediction'] = ""
-    for i in range(len(players)):
-      players['prediction'].iloc[i]= float(return_prediction(players['id'].iloc[i])['prediction'])
+    # for i in range(len(players)):
+    #   players['prediction'].iloc[i]= float(return_prediction(players['id'].iloc[i])['prediction'])
       #predictions.append(return_prediction(players['id'].iloc[i]))
-    #players['prediction'] = [return_prediction(players['id'].iloc[i] for i in range(len(players)))['prediction']]
+    players['prediction'] = [float(return_prediction(players['id'].iloc[i] for i in range(len(players)))['prediction'])]
     print(predictions)
-    #print(players.head())
     #players['opponent_team_name'] = latest_teams['short_name'][latest_teams['team']==players['opponent_team']]
-    #print(players['opponent_team_name'])
+
+
     # for i in range(len(players)):
     #   y_pred=model.predict([players[['team_a_score', 'team_h_score','minutes', 'was_home', 'opponent_team']].iloc[i]]).copy()
     #   players['prediction'].iloc[i]=y_pred.round()
@@ -57,13 +61,7 @@ def main():
     subs = players.iloc[-4:].copy()
     cond = players['id'].isin(subs['id'])
     players.drop(players[cond].index, inplace = True)
-    #players = players - subs
 
-    # strikers = return_name(strikers)
-    # midfielders = return_name(midfielders)
-    # defenders = return_name(defenders)
-    # goalkeepers = return_name(goalkeepers)
-    # players['prediction']=np.zeros(len(players))
 
     strikers = players[players.player_position==4]
     midfielders = players[players.player_position==3]
