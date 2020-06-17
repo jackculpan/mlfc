@@ -39,16 +39,20 @@ def main():
     latest_teams = players_df[players_df['season'] == 19]
     latest_teams = latest_teams[latest_teams['round']==max(latest_teams['round'])]
     players = [latest_teams[latest_teams['id']==team_info['picks'][i]['element']] for i in range(len(team_info['picks']))]
-    #players['prediction'] = [return_prediction(players['id'].iloc[i]) for i in range(len(players))]
     players = pd.concat(players)
-    #print(players.head())
-    players['prediction'] = np.zeros(len(players))
-    print(latest_teams.head())
-    players['opponent_team_name'] = latest_teams['short_name'][latest_teams['team']==players['opponent_team']]
-    print(players['opponent_team_name'])
+    predictions=[]
+    players['prediction'] = ""
     for i in range(len(players)):
-      y_pred=model.predict([players[['team_a_score', 'team_h_score','minutes', 'was_home', 'opponent_team']].iloc[i]]).copy()
-      players['prediction'].iloc[i]=y_pred.round()
+      players['prediction'].iloc[i]= float(return_prediction(players['id'].iloc[i])['prediction'])
+      #predictions.append(return_prediction(players['id'].iloc[i]))
+    #players['prediction'] = [return_prediction(players['id'].iloc[i] for i in range(len(players)))['prediction']]
+    print(predictions)
+    #print(players.head())
+    #players['opponent_team_name'] = latest_teams['short_name'][latest_teams['team']==players['opponent_team']]
+    #print(players['opponent_team_name'])
+    # for i in range(len(players)):
+    #   y_pred=model.predict([players[['team_a_score', 'team_h_score','minutes', 'was_home', 'opponent_team']].iloc[i]]).copy()
+    #   players['prediction'].iloc[i]=y_pred.round()
 
     subs = players.iloc[-4:].copy()
     cond = players['id'].isin(subs['id'])
@@ -74,7 +78,7 @@ def main():
                                  strikers=(zip(strikers['name'], strikers['prediction'])),\
                                  midfielders=(zip(midfielders['name'], midfielders['prediction'])), \
                                  defenders=(zip(defenders['name'], defenders['prediction'])), \
-                                 goalkeepers=(zip(goalkeepers['name'], goalkeepers['opponent_team'], goalkeepers['prediction'])),\
+                                 goalkeepers=(zip(goalkeepers['name'], goalkeepers['prediction'])),\
                                  subs=(zip(subs['name'], subs['prediction'])),\
                                  stats=(team_points, sub_points),\
                                  chips=(chips)
@@ -160,9 +164,13 @@ def store_team(user_id, team_info, session):
 
 def return_prediction(player_id):
     collection = db["lstm_predictions"]
-    player = collection.find_one({"id":player_id})
-    return player['prediction']
+    player = collection.find_one({"id":str(player_id)})
+    return player
 
+def return_upcoming_fixture(player_id):
+    collection = db["lstm_predictions"]
+    player = collection.find_one({"id":str(player_id)})
+    return player['opponent_team_name']
 
 if __name__ == '__main__':
     app.run(debug=True)
