@@ -35,30 +35,49 @@ def main():
     user_id = flask.request.form['user_id']
     session = authenticate(session, email, password)
     team_info = get_team(session, user_id)
+    chips = [{"name":team_info['chips'][i]['name'], "value":team_info['chips'][i]['status_for_entry']} for i in range(len(team_info['chips']))]
     latest_teams = players_df[players_df['season'] == 19]
-    latest_teams = latest_teams[latest_teams['round']==1]
+    latest_teams = latest_teams[latest_teams['round']==max(latest_teams['round'])]
     players = [latest_teams[latest_teams['id']==team_info['picks'][i]['element']] for i in range(len(team_info['picks']))]
+    #players['prediction'] = [return_prediction(players['id'].iloc[i]) for i in range(len(players))]
     players = pd.concat(players)
+    #print(players.head())
+    players['prediction'] = np.zeros(len(players))
+    print(latest_teams.head())
+    players['opponent_team_name'] = latest_teams['short_name'][latest_teams['team']==players['opponent_team']]
+    print(players['opponent_team_name'])
+    for i in range(len(players)):
+      y_pred=model.predict([players[['team_a_score', 'team_h_score','minutes', 'was_home', 'opponent_team']].iloc[i]]).copy()
+      players['prediction'].iloc[i]=y_pred.round()
 
+    subs = players.iloc[-4:].copy()
+    cond = players['id'].isin(subs['id'])
+    players.drop(players[cond].index, inplace = True)
+    #players = players - subs
 
     # strikers = return_name(strikers)
     # midfielders = return_name(midfielders)
     # defenders = return_name(defenders)
     # goalkeepers = return_name(goalkeepers)
-    players['prediction']=np.zeros(len(players))
-    for i in range(len(players)):
-      y_pred=model.predict([players[['team_a_score', 'team_h_score','minutes', 'was_home', 'opponent_team']].iloc[i]])
-      players['prediction'].iloc[i]=y_pred.round()
+    # players['prediction']=np.zeros(len(players))
 
     strikers = players[players.player_position==4]
     midfielders = players[players.player_position==3]
     defenders = players[players.player_position==2]
     goalkeepers = players[players.player_position==1]
 
+    team_points = int(sum(players.prediction))
+    sub_points = int(sum(subs.prediction))
+
     return flask.render_template('main.html',
                                  original_input={'user_id':int(user_id), 'email':str(email),'password':str(password)},
-                                 strikers=(strikers.name), midfielders=(midfielders.name), defenders=(defenders.name), goalkeepers=(goalkeepers.name),\
-                                 predictions=(zip(players['name'], players['prediction'])),result=(team_info['picks']),
+                                 strikers=(zip(strikers['name'], strikers['prediction'])),\
+                                 midfielders=(zip(midfielders['name'], midfielders['prediction'])), \
+                                 defenders=(zip(defenders['name'], defenders['prediction'])), \
+                                 goalkeepers=(zip(goalkeepers['name'], goalkeepers['opponent_team'], goalkeepers['prediction'])),\
+                                 subs=(zip(subs['name'], subs['prediction'])),\
+                                 stats=(team_points, sub_points),\
+                                 chips=(chips)
                                  )
 
 @app.route('/team', methods=['GET'])
@@ -138,6 +157,11 @@ def store_team(user_id, team_info, session):
     collection.insert_one(team_info)
   else:
     collection.find_one_and_update({"user_id":user_id}, {"$set": team_info})
+
+def return_prediction(player_id):
+    collection = db["lstm_predictions"]
+    player = collection.find_one({"id":player_id})
+    return player['prediction']
 
 
 if __name__ == '__main__':

@@ -23,30 +23,52 @@
           </fieldset>
         </form>
         <br>
-        <div class="result" align="center">
-          {% if result %}
+        <div class="players" align="center" style="background-image: url('https://images.unsplash.com/photo-1583296736338-23226493a0ff?ixlib=rb-1.2.1&auto=format&fit=crop&w=634&q=80'); background-repeat:no-repeat;   background-size: cover;" >
+          {% if strikers %}
+          <div class="team" style="color: white;">
               <br>
-              <br> <h2> Here's your team: </h2>
-              {% for prediction in predictions %}
-                  <ul >{{ prediction[0] }} -> {{ prediction[1] }}  </ul>
+              <h2> Here's your team: </h2>
+              <br>
+            <div class="goalkeepers" >
+              {% for prediction in goalkeepers %}
+                  <ul > {{ prediction[0] }} </ul>
+                  <ul > {{ prediction[1] }} </ul>
               {% endfor %}
-
-              <!-- {% for player in goalkeepers %}
-                  <ul >{{ player }} -> {{ prediction }}  </ul>
+            </div>
+            <div class="defenders">
+              {% for prediction in defenders %}
+                  <ul > {{ prediction[0] }} </ul>
+                  <ul > {{ prediction[1] }} </ul>
               {% endfor %}
-
-              {% for player in defenders %}
-                  <ul>{{ player }} -> 5 </ul>
+            </div>
+            <div class="midfielders">
+              {% for prediction in midfielders %}
+                  <ul > {{ prediction[0] }} </ul>
+                  <ul > {{ prediction[1] }} </ul>
               {% endfor %}
-
-              {% for player in midfielders %}
-                  <ul>{{ player }} -> 7 </ul>
+            </div>
+            <div class="strikers">
+              {% for prediction in strikers %}
+                  <ul > {{ prediction[0] }} </ul>
+                  <ul > {{ prediction[1] }} </ul>
               {% endfor %}
+            </div>
+            <h4> Total points: {{ stats[0] }} </h4>
+          </div>
+          <div class="subs">
+            <h3>Subs</h3>
+            {% for prediction in subs %}
+                <ul > {{ prediction[0] }} </ul>
+                <ul > {{ prediction[1] }} </ul>
+            {% endfor %}
 
-              {% for player in strikers %}
-                  <ul>{{ player }} -> 10 </ul>
-              {% endfor %} -->
-
+            <h4> Total points: {{ stats[1] }} </h4>
+          </div>
+          <div class="chips">
+            {% for chip in chips %}
+                <ul > {{ chip['name'] }} => {{ chip['value'] }} </ul>
+            {% endfor %}
+          </div>
           {% endif %}
         </div>
       </div>
