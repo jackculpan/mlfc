@@ -47,7 +47,7 @@ def main():
       #predictions.append(return_prediction(players['id'].iloc[i]))
     if len(players) > 1:
       predictions = [float(return_prediction(players['id'].iloc[i])['prediction']) for i in range(len(players))]
-      players['prediction'] = predictions
+      players['prediction'] = predictions.round()
       #players['opponent_team_name'] = [return_prediction(players['id'].iloc[i])['team_short_name'] for i in range(len(players))]
 
 
