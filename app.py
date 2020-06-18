@@ -18,8 +18,8 @@ MONGODB = "mlfc"
 cluster = MongoClient("mongodb+srv://jackculpan:{}@cluster0-vamzb.gcp.mongodb.net/mlfc".format(MONGODB))
 db = cluster["mlfc"]
 
-with open(f'model/rfr.pkl', 'rb') as f:
-    model = pickle.load(f)
+# with open(f'model/rfr.pkl', 'rb') as f:
+#     model = pickle.load(f)
 
 @app.route('/', methods=['GET', 'POST'])
 def main():
