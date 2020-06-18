@@ -37,21 +37,18 @@ def main():
 
     team_info = get_team(session, user_id)
     chips = [{"name":team_info['chips'][i]['name'], "value":team_info['chips'][i]['status_for_entry']} for i in range(len(team_info['chips']))]
-
     latest_teams = players_df[players_df['season'] == 19]
     latest_teams = latest_teams[latest_teams['round']==max(latest_teams['round'])]
     players = [latest_teams[latest_teams['id']==team_info['picks'][i]['element']] for i in range(len(team_info['picks']))]
     players = pd.concat(players)
-
-
-    predictions=[]
-    players['prediction'] = ""
+    # players['prediction'] = np.z
     # for i in range(len(players)):
     #   players['prediction'].iloc[i]= float(return_prediction(players['id'].iloc[i])['prediction'])
       #predictions.append(return_prediction(players['id'].iloc[i]))
-    players['prediction'] = [float(return_prediction(players['id'].iloc[i] for i in range(len(players)))['prediction'])]
-    print(predictions)
-    #players['opponent_team_name'] = latest_teams['short_name'][latest_teams['team']==players['opponent_team']]
+    if len(players) > 1:
+      predictions = [float(return_prediction(players['id'].iloc[i])['prediction']) for i in range(len(players))]
+      players['prediction'] = predictions
+      #players['opponent_team_name'] = [return_prediction(players['id'].iloc[i])['team_short_name'] for i in range(len(players))]
 
 
     # for i in range(len(players)):
@@ -162,12 +159,12 @@ def store_team(user_id, team_info, session):
 
 def return_prediction(player_id):
     collection = db["lstm_predictions"]
-    player = collection.find_one({"id":str(player_id)})
+    player = collection.find_one({"id":int(player_id)})
     return player
 
 def return_upcoming_fixture(player_id):
     collection = db["lstm_predictions"]
-    player = collection.find_one({"id":str(player_id)})
+    player = collection.find_one({"id":int(player_id)})
     return player['opponent_team_name']
 
 if __name__ == '__main__':
