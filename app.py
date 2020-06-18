@@ -10,8 +10,8 @@ from pymongo import MongoClient
 app = flask.Flask(__name__, template_folder='templates')
 
 # env_variables
-MONGODB = os.getenv('MONGODB', None)
-RAPIDAPIKEY = os.getenv('RAPIDAPIKEY', None)
+# MONGODB = os.getenv('MONGODB', None)
+# RAPIDAPIKEY = os.getenv('RAPIDAPIKEY', None)
 RAPIDAPIKEY = "b49dab746amsh92ab31faa3e490dp105183jsncd7a70b49a7e"
 MONGODB = "mlfc"
 
