@@ -41,15 +41,12 @@ def main():
     latest_teams = latest_teams[latest_teams['round']==max(latest_teams['round'])]
     players = [latest_teams[latest_teams['id']==team_info['picks'][i]['element']] for i in range(len(team_info['picks']))]
     players = pd.concat(players)
-    # players['prediction'] = np.z
-    # for i in range(len(players)):
-    #   players['prediction'].iloc[i]= float(return_prediction(players['id'].iloc[i])['prediction'])
-      #predictions.append(return_prediction(players['id'].iloc[i]))
-    if len(players) > 1:
-      predictions = [float(return_prediction(players['id'].iloc[i])['prediction']) for i in range(len(players))]
-      players['prediction'] = predictions.round()
-      #players['opponent_team_name'] = [return_prediction(players['id'].iloc[i])['team_short_name'] for i in range(len(players))]
 
+    if len(players) > 1:
+      players['prediction'] = [float(return_prediction(players['id'].iloc[i])['prediction']) for i in range(len(players))]
+      #players['prediction'] = predictions
+      players['team_short_name'] = [return_prediction(players['id'].iloc[i])['team_short_name'] for i in range(len(players))]
+      #players['opponent_team_short_name'] = [return_prediction(players['id'].iloc[i])['opponent_team_short_name'] for i in range(len(players))]
 
     # for i in range(len(players)):
     #   y_pred=model.predict([players[['team_a_score', 'team_h_score','minutes', 'was_home', 'opponent_team']].iloc[i]]).copy()
@@ -70,11 +67,11 @@ def main():
 
     return flask.render_template('main.html',
                                  original_input={'user_id':int(user_id), 'email':str(email),'password':str(password)},
-                                 strikers=(zip(strikers['name'], strikers['prediction'])),\
-                                 midfielders=(zip(midfielders['name'], midfielders['prediction'])), \
-                                 defenders=(zip(defenders['name'], defenders['prediction'])), \
-                                 goalkeepers=(zip(goalkeepers['name'], goalkeepers['prediction'])),\
-                                 subs=(zip(subs['name'], subs['prediction'])),\
+                                 strikers=(zip(strikers['name'], strikers['team_short_name'], strikers['prediction'])),\
+                                 midfielders=(zip(midfielders['name'],midfielders['team_short_name'], midfielders['prediction'])), \
+                                 defenders=(zip(defenders['name'], defenders['team_short_name'], defenders['prediction'])), \
+                                 goalkeepers=(zip(goalkeepers['name'], goalkeepers['team_short_name'],  goalkeepers['prediction'])),\
+                                 subs=(zip(subs['name'], subs['team_short_name'], subs['prediction'])),\
                                  stats=(team_points, sub_points),\
                                  chips=(chips)
                                  )
