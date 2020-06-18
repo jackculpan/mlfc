@@ -46,6 +46,7 @@ def main():
       players['prediction'] = [float(return_prediction(players['id'].iloc[i])['prediction']) for i in range(len(players))]
       #players['prediction'] = predictions
       players['team_short_name'] = [return_prediction(players['id'].iloc[i])['team_short_name'] for i in range(len(players))]
+      players['opponent_short_team_name'] = [return_prediction(players['id'].iloc[i])['opponent_short_team_name'] for i in range(len(players))]
       #players['opponent_team_short_name'] = [return_prediction(players['id'].iloc[i])['opponent_team_short_name'] for i in range(len(players))]
 
     # for i in range(len(players)):
@@ -67,10 +68,10 @@ def main():
 
     return flask.render_template('main.html',
                                  original_input={'user_id':int(user_id), 'email':str(email),'password':str(password)},
-                                 strikers=(zip(strikers['name'], strikers['team_short_name'], strikers['prediction'])),\
-                                 midfielders=(zip(midfielders['name'],midfielders['team_short_name'], midfielders['prediction'])), \
-                                 defenders=(zip(defenders['name'], defenders['team_short_name'], defenders['prediction'])), \
-                                 goalkeepers=(zip(goalkeepers['name'], goalkeepers['team_short_name'],  goalkeepers['prediction'])),\
+                                 strikers=(zip(strikers['name'], strikers['team_short_name'], strikers['opponent_short_team_name'], strikers['prediction'])),\
+                                 midfielders=(zip(midfielders['name'],midfielders['team_short_name'], midfielders['opponent_short_team_name'], midfielders['prediction'])), \
+                                 defenders=(zip(defenders['name'], defenders['team_short_name'], defenders['opponent_short_team_name'], defenders['prediction'])), \
+                                 goalkeepers=(zip(goalkeepers['name'], goalkeepers['team_short_name'], goalkeepers['opponent_short_team_name'],  goalkeepers['prediction'])),\
                                  subs=(zip(subs['name'], subs['team_short_name'], subs['prediction'])),\
                                  stats=(team_points, sub_points),\
                                  chips=(chips)

@@ -32,8 +32,8 @@
             <div class="goalkeepers" style=''>
               {% for prediction in goalkeepers %}
                   <ul > {{ prediction[0] }} </ul>
-                  <ul > {{ prediction[1] }} vs ... </ul>
-                  <ul > {{ prediction[2] }} </ul>
+                  <ul > {{ prediction[1] }} vs {{ prediction[2] }} </ul>
+                  <ul > {{ prediction[3] }} </ul>
               {% endfor %}
             </div>
             <br>
@@ -41,8 +41,8 @@
               {% for prediction in defenders %}
                 <div class="item"style='padding-left: 20px; padding-right: 20px; border-radius: 20px; border-style: solid white'>
                   <ul > {{ prediction[0] }} </ul>
-                  <ul > {{ prediction[1] }} vs ... </ul>
-                  <ul > {{ prediction[2] }} </ul>
+                  <ul > {{ prediction[1] }} vs {{ prediction[2] }} </ul>
+                  <ul > {{ prediction[3] }} </ul>
                 </div>
               {% endfor %}
             </div>
@@ -51,8 +51,8 @@
               {% for prediction in midfielders %}
                 <div class="item"style='padding-left: 20px; padding-right: 20px;'>
                   <ul > {{ prediction[0] }} </ul>
-                  <ul > {{ prediction[1] }} vs ... </ul>
-                  <ul > {{ prediction[2] }} </ul>
+                  <ul > {{ prediction[1] }} vs {{ prediction[2] }} </ul>
+                  <ul > {{ prediction[3] }} </ul>
                 </div>
               {% endfor %}
             </div>
@@ -61,8 +61,8 @@
               {% for prediction in strikers %}
                 <div class="item"style='padding-left: 20px; padding-right: 20px;'>
                   <ul > {{ prediction[0] }} </ul>
-                  <ul > {{ prediction[1] }} vs ... </ul>
-                  <ul > {{ prediction[2] }} </ul>
+                  <ul > {{ prediction[1] }} vs {{ prediction[2] }} </ul>
+                  <ul > {{ prediction[3] }} </ul>
                 </div>
               {% endfor %}
             </div>
@@ -73,8 +73,8 @@
               {% for prediction in subs %}
                 <div class="item"style='padding-left: 20px; padding-right: 20px;'>
                   <ul > {{ prediction[0] }} </ul>
-                  <ul > {{ prediction[1] }} vs ... </ul>
-                  <ul > {{ prediction[2] }} </ul>
+                  <ul > {{ prediction[1] }} vs {{ prediction[2] }} </ul>
+                  <ul > {{ prediction[3] }} </ul>
                 </div>
               {% endfor %}
             </div>
