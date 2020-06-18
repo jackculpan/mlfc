@@ -43,14 +43,30 @@ def main():
     players = pd.concat(players)
 
     if len(players) > 1:
-      players['prediction'] = [float(return_prediction(players['id'].iloc[i])['prediction']) for i in range(len(players))]
+      gameweek=39
+      #players_db = [return_prediction(players['id'].iloc[i]) for i in range(len(players))]
+      #print(players_db)
+      #players['prediction'] = [(float(players_db[i]['prediction']) for i in range(len(players)))]
+      #players['team_short_name'] = [players_db[i]['team_short_name'] for i in range(len(players))]
+      #players['opponent_short_team_name'] = [players_db[i]['opponent_short_team_name'] for i in range(len(players))]
+      players['prediction'] = [float(return_prediction(players['id'].iloc[i], gameweek)['prediction']) for i in range(len(players))]
       #players['prediction'] = predictions
-      players['team_short_name'] = [return_prediction(players['id'].iloc[i])['team_short_name'] for i in range(len(players))]
-      players['opponent_short_team_name'] = [return_prediction(players['id'].iloc[i])['opponent_short_team_name'] for i in range(len(players))]
-      #players['opponent_team_short_name'] = [return_prediction(players['id'].iloc[i])['opponent_team_short_name'] for i in range(len(players))]
+      players['team_short_name'] = [return_prediction(players['id'].iloc[i],gameweek)['team_short_name'] for i in range(len(players))]
+      players['opponent_short_team_name'] = [return_prediction(players['id'].iloc[i],gameweek)['opponent_short_team_name'] for i in range(len(players))]
+      players['was_home'] = [return_prediction(players['id'].iloc[i],gameweek)['was_home'] for i in range(len(players))]
 
-    # for i in range(len(players)):
-    #   y_pred=model.predict([players[['team_a_score', 'team_h_score','minutes', 'was_home', 'opponent_team']].iloc[i]]).copy()
+      for i in range(len(players)):
+        if players['was_home'].iloc[i] == "True":
+          players['team_short_name'].iloc[i]=str(players['team_short_name'].iloc[i]) + " (H)"
+        if players['was_home'].iloc[i] == "False":
+          players['opponent_short_team_name'].iloc[i]=str(players['opponent_short_team_name'].iloc[i]) + " (H)"
+
+
+      for i in range(len(team_info)):
+        if team_info['picks'][i]['is_captain'] == True:
+          players['name'][players['id']==team_info['picks'][i]['element']]=str(players['name'][players['id']==team_info['picks'][i]['element']]) + " (C)"
+        if team_info['picks'][i]['is_vice_captain'] == True:
+          players['name'][players['id']==team_info['picks'][i]['element']]=str(players['name'][players['id']==team_info['picks'][i]['element']]) + " (VC)"    #   y_pred=model.predict([players[['team_a_score', 'team_h_score','minutes', 'was_home', 'opponent_team']].iloc[i]]).copy()
     #   players['prediction'].iloc[i]=y_pred.round()
 
     subs = players.iloc[-4:].copy()
@@ -68,11 +84,11 @@ def main():
 
     return flask.render_template('main.html',
                                  original_input={'user_id':int(user_id), 'email':str(email),'password':str(password)},
-                                 strikers=(zip(strikers['name'], strikers['team_short_name'], strikers['opponent_short_team_name'], strikers['prediction'])),\
-                                 midfielders=(zip(midfielders['name'],midfielders['team_short_name'], midfielders['opponent_short_team_name'], midfielders['prediction'])), \
-                                 defenders=(zip(defenders['name'], defenders['team_short_name'], defenders['opponent_short_team_name'], defenders['prediction'])), \
-                                 goalkeepers=(zip(goalkeepers['name'], goalkeepers['team_short_name'], goalkeepers['opponent_short_team_name'],  goalkeepers['prediction'])),\
-                                 subs=(zip(subs['name'], subs['team_short_name'], subs['prediction'])),\
+                                 strikers=(zip(strikers['name'], strikers['team_short_name'], strikers['opponent_short_team_name'], strikers['prediction'].round())),\
+                                 midfielders=(zip(midfielders['name'],midfielders['team_short_name'], midfielders['opponent_short_team_name'], midfielders['prediction'].round())), \
+                                 defenders=(zip(defenders['name'], defenders['team_short_name'], defenders['opponent_short_team_name'], defenders['prediction'].round())), \
+                                 goalkeepers=(zip(goalkeepers['name'], goalkeepers['team_short_name'], goalkeepers['opponent_short_team_name'],  goalkeepers['prediction'].round())),\
+                                 subs=(zip(subs['name'], subs['team_short_name'],subs['opponent_short_team_name'], subs['prediction'].round())),\
                                  stats=(team_points, sub_points),\
                                  chips=(chips)
                                  )
@@ -155,9 +171,9 @@ def store_team(user_id, team_info, session):
   else:
     collection.find_one_and_update({"user_id":user_id}, {"$set": team_info})
 
-def return_prediction(player_id):
-    collection = db["lstm_predictions"]
-    player = collection.find_one({"id":int(player_id)})
+def return_prediction(player_id, gameweek):
+    collection = db["lstm_predictions_total"]
+    player = collection.find_one({"id":int(player_id), "event":gameweek})
     return player
 
 def return_upcoming_fixture(player_id):
