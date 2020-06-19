@@ -33,6 +33,7 @@ def main():
     email = flask.request.form['email']
     password = flask.request.form['password']
     user_id = flask.request.form['user_id']
+    gameweek = int(flask.request.form['gameweek'])
     session = authenticate(session, email, password)
 
     team_info = get_team(session, user_id)
@@ -43,7 +44,7 @@ def main():
     players = pd.concat(players)
 
     if len(players) > 1:
-      gameweek=39
+      #gameweek=39
       #players_db = [return_prediction(players['id'].iloc[i]) for i in range(len(players))]
       #print(players_db)
       #players['prediction'] = [(float(players_db[i]['prediction']) for i in range(len(players)))]
