@@ -48,6 +48,9 @@ def get_predictions(fixture_id):
   collection = db["fixture_info"]
 
   for fixture in response['api']['predictions']:
+    fixture['teams']['home']['code'], fixture['teams']['home']['logo'] = get_fpl_team_data(fixture['teams']['home']['team_id'])
+    fixture['teams']['away']['code'], fixture['teams']['away']['logo'] = get_fpl_team_data(fixture['teams']['away']['team_id'])
+
     fixture['fixture_id'] = fixture_id
     if collection.find_one({"fixture_id":fixture_id}) == None:
       collection.insert_one(fixture)
@@ -56,6 +59,37 @@ def get_predictions(fixture_id):
 
   return "fixture updated"
 
+@app.route('/save_teams', methods=['GET'])
+def save_teams():
+  url = "https://api-football-v1.p.rapidapi.com/v2/teams/league/524"
+  response = rapid_api_call(url)
+  collection = db["teams"]
+  #print(response)
+  for team in response['api']['teams']:
+    if collection.find_one({"team_id":team['team_id']}) == None:
+      collection.insert_one(team)
+    else:
+      collection.find_one_and_update({"team_id":team['team_id']}, {"$set": team})
+  return "Done"
+
+@app.route('/save_team', methods=['GET'])
+def save_team():
+  collection = db["teams"]
+  for team_collection in collection.find():
+    team_id = team_collection['team_id']
+    url = f"https://api-football-v1.p.rapidapi.com/v2/teams/team/{team_id}"
+    response = rapid_api_call(url)
+    for team in response['api']['teams']:
+        collection.find_one_and_update({"team_id":team_id}, {"$set": team})
+  return "done"
+
+## Issue is that most of the teams don't have a code via rapidapi.. Need to manually create a dict
+
+def get_fpl_team_data(team_id):
+  collection = db["teams"]
+  if collection.find_one({"team_id":int(team_id)}):
+    team = collection.find_one({"team_id":team_id})
+    return team['code'], team['logo']
 
 if __name__ == '__main__':
     app.run()

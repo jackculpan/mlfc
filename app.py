@@ -6,6 +6,7 @@ import requests, json, random, os, schedule, time
 from fpl import FPL
 import pymongo
 from pymongo import MongoClient
+import difflib
 
 app = flask.Flask(__name__, template_folder='templates')
 
@@ -59,16 +60,17 @@ def main():
       for i in range(len(players)):
         if players['was_home'].iloc[i] == "True":
           players['team_short_name'].iloc[i]=str(players['team_short_name'].iloc[i]) + " (H)"
-        if players['was_home'].iloc[i] == "False":
+        elif players['was_home'].iloc[i] == "False":
           players['opponent_short_team_name'].iloc[i]=str(players['opponent_short_team_name'].iloc[i]) + " (H)"
-
-
-      for i in range(len(team_info)):
         if team_info['picks'][i]['is_captain'] == True:
-          players['name'][players['id']==team_info['picks'][i]['element']]=str(players['name'][players['id']==team_info['picks'][i]['element']]) + " (C)"
-        if team_info['picks'][i]['is_vice_captain'] == True:
-          players['name'][players['id']==team_info['picks'][i]['element']]=str(players['name'][players['id']==team_info['picks'][i]['element']]) + " (VC)"    #   y_pred=model.predict([players[['team_a_score', 'team_h_score','minutes', 'was_home', 'opponent_team']].iloc[i]]).copy()
-    #   players['prediction'].iloc[i]=y_pred.round()
+          element = team_info['picks'][i]['element']
+          captain = players[players['id']==element].name.values[0]
+          # print(players[players['id']==element].name.values[0]+ " (C)")
+          # players[players['id']==element].name = players[players['id']==element].name.values[0] + " (C)"
+        elif team_info['picks'][i]['is_vice_captain'] == True:
+          element = team_info['picks'][i]['element']
+          vice_captain = players[players['id']==element].name.values[0]
+          # players[players['id']==element]['name'] = str(players[players['id']==element].name.values[0] + " (VC)")
 
     subs = players.iloc[-4:].copy()
     cond = players['id'].isin(subs['id'])
@@ -91,6 +93,7 @@ def main():
                                  goalkeepers=(zip(goalkeepers['name'], goalkeepers['team_short_name'], goalkeepers['opponent_short_team_name'],  goalkeepers['prediction'].round())),\
                                  subs=(zip(subs['name'], subs['team_short_name'],subs['opponent_short_team_name'], subs['prediction'].round())),\
                                  stats=(team_points, sub_points),\
+                                 captain=(captain, vice_captain),
                                  chips=(chips)
                                  )
 
