@@ -124,24 +124,46 @@ def dream_team():
   names = players.web_name
   prices = players['now_cost']/10
   #dreamteam = return_dreamteam(players)
-  selection,captain_selection = [],[]
-  decisions, captain_decisions = select_team(players.prediction, prices, players.element_type, players.team_code)
+  captain_selection=[]
+  selection,sub_selection = [],[]
+
+  decisions, captain_decisions, sub_decisions = select_team(players.prediction, prices, players.element_type, players.team_code)
+
   for i in range(players.shape[0]):
     if decisions[i].value() != 0:
         print("**{}** Points = {}, Price = {}".format(names[i], players.prediction[i], prices[i]))
         selection.append(names[i])
+
   for i in range(players.shape[0]):
     if captain_decisions[i].value() == 1:
         print("**CAPTAIN: {}** Points = {}, Price = {}".format(names[i], players.prediction[i], prices[i]))
         captain_selection.append(names[i])
 
+  for i in range(players.shape[0]):
+    if sub_decisions[i].value() == 1:
+        print("**SUBS: {}** Points = {}, Price = {}".format(names[i], players.prediction[i], prices[i]))
+        sub_selection.append(names[i])
+
+  subs = [players[players.web_name == sub_selection[i]] for i in range(len(sub_selection))]
+  subs = pd.concat(subs)
+
   players = [players[players.web_name == selection[i]] for i in range(len(selection))]
   players = pd.concat(players)
-  captain = players[players.web_name == captain_selection[0]]
-  # subs = players.iloc[-4:].copy()
-  # cond = players['id'].isin(subs['id'])
-  # players.drop(players[cond].index, inplace = True)
 
+  for i in range(len(players)):
+    if players['was_home'].iloc[i] == "True":
+      players['team_short_name'].iloc[i]=str(players['team_short_name'].iloc[i]) + " (H)"
+    elif players['was_home'].iloc[i] == "False":
+      players['opponent_short_team_name'].iloc[i]=str(players['opponent_short_team_name'].iloc[i]) + " (H)"
+
+  for i in range(len(subs)):
+    if subs['was_home'].iloc[i] == "True":
+      subs['team_short_name'].iloc[i]=str(subs['team_short_name'].iloc[i]) + " (H)"
+    elif players['was_home'].iloc[i] == "False":
+      subs['opponent_short_team_name'].iloc[i]=str(subs['opponent_short_team_name'].iloc[i]) + " (H)"
+
+  captains = [players[players.web_name == captain_selection[i]] for i in range(len(captain_selection))]
+  captains = pd.concat(captains)
 
   strikers = players[players.element_type==4]
   midfielders = players[players.element_type==3]
@@ -149,19 +171,16 @@ def dream_team():
   goalkeepers = players[players.element_type==1]
 
   team_points = int(sum(players.prediction))
-  print(team_points)
-  # sub_points = int(sum(subs.prediction))
+  sub_points = int(sum(subs.prediction))
 
   return flask.render_template('dreamteam.html',
                                strikers=(zip(strikers['web_name'], strikers['team_short_name'], strikers['opponent_short_team_name'], strikers['prediction'].round())),\
                                midfielders=(zip(midfielders['web_name'],midfielders['team_short_name'], midfielders['opponent_short_team_name'], midfielders['prediction'].round())), \
                                defenders=(zip(defenders['web_name'], defenders['team_short_name'], defenders['opponent_short_team_name'], defenders['prediction'].round())), \
                                goalkeepers=(zip(goalkeepers['web_name'], goalkeepers['team_short_name'], goalkeepers['opponent_short_team_name'],  goalkeepers['prediction'].round())),\
-                               # subs=(zip(subs['web_name'], subs['team_short_name'],subs['opponent_short_team_name'], subs['prediction'].round())),\
-                               # stats=(team_points, sub_points),\
-                               stats=(team_points),\
-                               # captain=(captain, vice_captain),
-                               captain=(captain['web_name']),
+                               subs=(zip(subs['web_name'], subs['team_short_name'],subs['opponent_short_team_name'], subs['prediction'].round())),\
+                               stats=(team_points, sub_points),\
+                               captain=(captains['web_name'].iloc[0], captains['web_name'].iloc[1]),
                                )
 
 @app.route('/team', methods=['GET'])
@@ -191,7 +210,7 @@ def return_name(player):
 
 from pulp import *
 
-def select_team(expected_scores, prices, positions, clubs):
+def select_team(expected_scores, prices, positions, clubs, total_budget=100, sub_factor=0.2):
     num_players = len(expected_scores)
     model = LpProblem("Constrained value maximisation", LpMaximize)
     decisions = [
@@ -202,39 +221,58 @@ def select_team(expected_scores, prices, positions, clubs):
         LpVariable("y{}".format(i), lowBound=0, upBound=1, cat='Integer')
         for i in range(num_players)
     ]
+    sub_decisions = [
+        LpVariable("z{}".format(i), lowBound=0, upBound=1, cat='Integer')
+        for i in range(num_players)
+    ]
+
 
     # objective function:
-    model += sum((captain_decisions[i] + decisions[i]) * expected_scores[i]
+    model += sum((captain_decisions[i] + decisions[i] + sub_decisions[i]*sub_factor) * expected_scores[i]
                  for i in range(num_players)), "Objective"
 
     # cost constraint
-    model += sum(decisions[i] * prices[i] for i in range(num_players)) <= 100  # total cost
-    model += sum(decisions) == 11  # total team size
+    model += sum((decisions[i] + sub_decisions[i]) * prices[i] for i in range(num_players)) <= total_budget  # total cost
 
     # position constraints
-    # 1 goalkeeper
+    # 1 starting goalkeeper
     model += sum(decisions[i] for i in range(num_players) if positions[i] == 1) == 1
-    # 3-5 defenders
+    # 2 total goalkeepers
+    model += sum(decisions[i] + sub_decisions[i] for i in range(num_players) if positions[i] == 1) == 2
+
+    # 3-5 starting defenders
     model += sum(decisions[i] for i in range(num_players) if positions[i] == 2) >= 3
     model += sum(decisions[i] for i in range(num_players) if positions[i] == 2) <= 5
-    # 3-5 midfielders
+    # 5 total defenders
+    model += sum(decisions[i] + sub_decisions[i] for i in range(num_players) if positions[i] == 2) == 5
+
+    # 3-5 starting midfielders
     model += sum(decisions[i] for i in range(num_players) if positions[i] == 3) >= 3
     model += sum(decisions[i] for i in range(num_players) if positions[i] == 3) <= 5
-    # 1-3 attackers
+    # 5 total midfielders
+    model += sum(decisions[i] + sub_decisions[i] for i in range(num_players) if positions[i] == 3) == 5
+
+    # 1-3 starting attackers
     model += sum(decisions[i] for i in range(num_players) if positions[i] == 4) >= 1
     model += sum(decisions[i] for i in range(num_players) if positions[i] == 4) <= 3
+    # 3 total attackers
+    model += sum(decisions[i] + sub_decisions[i] for i in range(num_players) if positions[i] == 4) == 3
 
     # club constraint
     for club_id in np.unique(clubs):
-        model += sum(decisions[i] for i in range(num_players) if clubs[i] == club_id) <= 3  # max 3 players
+        model += sum(decisions[i] + sub_decisions[i] for i in range(num_players) if clubs[i] == club_id) <= 3  # max 3 players
 
-    model += sum(captain_decisions) == 1  # 1 captain
+    model += sum(decisions) == 11  # total team size
+    model += sum(captain_decisions) == 2  # 1 captain
 
-    for i in range(num_players):  # captain must also be on team
-        model += (decisions[i] - captain_decisions[i]) >= 0
+    for i in range(num_players):
+        model += (decisions[i] - captain_decisions[i]) >= 0  # captain must also be on team
+        model += (decisions[i] + sub_decisions[i]) <= 1  # subs must not be on team
 
     model.solve()
-    return decisions, captain_decisions
+    print("Total expected score = {}".format(model.objective.value()))
+
+    return decisions, captain_decisions, sub_decisions
 
 
 def rapid_api_call(url):
