@@ -6,7 +6,6 @@ import requests, json, random, os, schedule, time
 from fpl import FPL
 import pymongo
 from pymongo import MongoClient
-import difflib
 
 app = flask.Flask(__name__, template_folder='templates')
 
