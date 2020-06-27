@@ -41,21 +41,36 @@ def get_fixtures():
 
   return "upcoming fixtures updated"
 
+@app.route('/get_all_fixtures', methods=['GET'])
+def get_all_fixtures():
+  url = "https://api-football-v1.p.rapidapi.com/v2/fixtures/league/524"
+  response = rapid_api_call(url)
+  collection = db["fixtures"]
+
+  for fixture in response['api']['fixtures']:
+    if collection.find_one({"fixture_id":fixture['fixture_id']}) == None:
+      collection.insert_one(fixture)
+    else:
+      collection.find_one_and_update({"fixture_id":fixture['fixture_id']}, {"$set": fixture})
+    get_predictions(fixture['fixture_id'])
+
+  return "fixtures updated"
+
 
 def get_predictions(fixture_id):
   url = f"https://api-football-v1.p.rapidapi.com/v2/predictions/{fixture_id}"
   response = rapid_api_call(url)
   collection = db["fixture_info"]
+  if response:
+    for fixture in response['api']['predictions']:
+      fixture['teams']['home']['code'], fixture['teams']['home']['logo'] = get_fpl_team_data(fixture['teams']['home']['team_id'])
+      fixture['teams']['away']['code'], fixture['teams']['away']['logo'] = get_fpl_team_data(fixture['teams']['away']['team_id'])
 
-  for fixture in response['api']['predictions']:
-    fixture['teams']['home']['code'], fixture['teams']['home']['logo'] = get_fpl_team_data(fixture['teams']['home']['team_id'])
-    fixture['teams']['away']['code'], fixture['teams']['away']['logo'] = get_fpl_team_data(fixture['teams']['away']['team_id'])
-
-    fixture['fixture_id'] = fixture_id
-    if collection.find_one({"fixture_id":fixture_id}) == None:
-      collection.insert_one(fixture)
-    else:
-      collection.find_one_and_update({"fixture_id":fixture['fixture_id']}, {"$set": fixture})
+      fixture['fixture_id'] = fixture_id
+      if collection.find_one({"fixture_id":fixture_id}) == None:
+        collection.insert_one(fixture)
+      else:
+        collection.find_one_and_update({"fixture_id":fixture['fixture_id']}, {"$set": fixture})
 
   return "fixture updated"
 

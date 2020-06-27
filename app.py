@@ -18,6 +18,7 @@ MONGODB = "mlfc"
 
 cluster = MongoClient("mongodb+srv://jackculpan:{}@cluster0-vamzb.gcp.mongodb.net/mlfc".format(MONGODB))
 db = cluster["mlfc"]
+players_df = pd.read_csv("https://raw.githubusercontent.com/jackculpan/mlfc/master/2016-2020_extra_gw_stats.csv")
 
 # with open(f'model/rfr.pkl', 'rb') as f:
 #     model = pickle.load(f)
@@ -25,8 +26,6 @@ db = cluster["mlfc"]
 @app.route('/', methods=['GET', 'POST'])
 def main():
   session = requests.session()
-  #players_df = pd.read_csv("https://raw.githubusercontent.com/jackculpan/Fantasy-Premier-League/master/data/2019-20/players_raw.csv",encoding = "ISO-8859-1")
-  players_df = pd.read_csv("https://raw.githubusercontent.com/jackculpan/mlfc/master/2016-2020_extra_gw_stats.csv")
   if flask.request.method == 'GET':
     return(flask.render_template('main.html'))
 
@@ -40,7 +39,8 @@ def main():
     team_info = get_team(session, user_id)
     chips = [{"name":team_info['chips'][i]['name'], "value":team_info['chips'][i]['status_for_entry']} for i in range(len(team_info['chips']))]
     latest_teams = players_df[players_df['season'] == 19]
-    latest_teams = latest_teams[latest_teams['round']==max(latest_teams['round'])]
+    #latest_teams = latest_teams[latest_teams['round']==max(latest_teams['round'])]
+    latest_teams = latest_teams[latest_teams['round']==gameweek]
     players = [latest_teams[latest_teams['id']==team_info['picks'][i]['element']] for i in range(len(team_info['picks']))]
     players = pd.concat(players)
 
@@ -97,6 +97,73 @@ def main():
                                  chips=(chips)
                                  )
 
+
+@app.route('/dreamteam', methods=['GET'])
+def dream_team():
+  latest_teams = pd.read_csv('https://raw.githubusercontent.com/jackculpan/Fantasy-Premier-League/master/data/2019-20/players_raw.csv')
+  gameweek = 41
+  #gameround = 32
+  #latest_teams = players_df[players_df['season'] == 19]
+  #print(latest_teams)
+
+  collection = db["lstm_predictions_total"]
+  top_20 = pd.DataFrame(collection.find({"event":gameweek}))
+  top_20 = top_20.sort_values('prediction', ascending=False)
+  players = [latest_teams[latest_teams['id'] == top_20['id'].iloc[i]] for i in range(len(top_20))]
+
+  players = pd.concat(players)
+  # players['prediction'] = np.zeros(len(players))
+  # for i in range(len(players)):
+  #   for j in range(len(top_20)):
+  #     if players['id'].iloc[i] == top_20['id'].iloc[j]:
+  #       players['prediction'].iloc[i] = float(top_20['prediction'].iloc[j])
+
+  players = pd.merge(players, top_20, on='id')
+  players['prediction'] = pd.to_numeric(players['prediction'])
+
+  names = players.web_name
+  prices = players['now_cost']/10
+  #dreamteam = return_dreamteam(players)
+  selection,captain_selection = [],[]
+  decisions, captain_decisions = select_team(players.prediction, prices, players.element_type, players.team_code)
+  for i in range(players.shape[0]):
+    if decisions[i].value() != 0:
+        print("**{}** Points = {}, Price = {}".format(names[i], players.prediction[i], prices[i]))
+        selection.append(names[i])
+  for i in range(players.shape[0]):
+    if captain_decisions[i].value() == 1:
+        print("**CAPTAIN: {}** Points = {}, Price = {}".format(names[i], players.prediction[i], prices[i]))
+        captain_selection.append(names[i])
+
+  players = [players[players.web_name == selection[i]] for i in range(len(selection))]
+  players = pd.concat(players)
+  captain = players[players.web_name == captain_selection[0]]
+  # subs = players.iloc[-4:].copy()
+  # cond = players['id'].isin(subs['id'])
+  # players.drop(players[cond].index, inplace = True)
+
+
+  strikers = players[players.element_type==4]
+  midfielders = players[players.element_type==3]
+  defenders = players[players.element_type==2]
+  goalkeepers = players[players.element_type==1]
+
+  team_points = int(sum(players.prediction))
+  print(team_points)
+  # sub_points = int(sum(subs.prediction))
+
+  return flask.render_template('dreamteam.html',
+                               strikers=(zip(strikers['web_name'], strikers['team_short_name'], strikers['opponent_short_team_name'], strikers['prediction'].round())),\
+                               midfielders=(zip(midfielders['web_name'],midfielders['team_short_name'], midfielders['opponent_short_team_name'], midfielders['prediction'].round())), \
+                               defenders=(zip(defenders['web_name'], defenders['team_short_name'], defenders['opponent_short_team_name'], defenders['prediction'].round())), \
+                               goalkeepers=(zip(goalkeepers['web_name'], goalkeepers['team_short_name'], goalkeepers['opponent_short_team_name'],  goalkeepers['prediction'].round())),\
+                               # subs=(zip(subs['web_name'], subs['team_short_name'],subs['opponent_short_team_name'], subs['prediction'].round())),\
+                               # stats=(team_points, sub_points),\
+                               stats=(team_points),\
+                               # captain=(captain, vice_captain),
+                               captain=(captain['web_name']),
+                               )
+
 @app.route('/team', methods=['GET'])
 def team():
   if flask.request.method == 'GET':
@@ -122,9 +189,52 @@ def get_team(session, user_id):
 def return_name(player):
   return player.first_name + " " + player.second_name
 
+from pulp import *
 
+def select_team(expected_scores, prices, positions, clubs):
+    num_players = len(expected_scores)
+    model = LpProblem("Constrained value maximisation", LpMaximize)
+    decisions = [
+        LpVariable("x{}".format(i), lowBound=0, upBound=1, cat='Integer')
+        for i in range(num_players)
+    ]
+    captain_decisions = [
+        LpVariable("y{}".format(i), lowBound=0, upBound=1, cat='Integer')
+        for i in range(num_players)
+    ]
 
+    # objective function:
+    model += sum((captain_decisions[i] + decisions[i]) * expected_scores[i]
+                 for i in range(num_players)), "Objective"
 
+    # cost constraint
+    model += sum(decisions[i] * prices[i] for i in range(num_players)) <= 100  # total cost
+    model += sum(decisions) == 11  # total team size
+
+    # position constraints
+    # 1 goalkeeper
+    model += sum(decisions[i] for i in range(num_players) if positions[i] == 1) == 1
+    # 3-5 defenders
+    model += sum(decisions[i] for i in range(num_players) if positions[i] == 2) >= 3
+    model += sum(decisions[i] for i in range(num_players) if positions[i] == 2) <= 5
+    # 3-5 midfielders
+    model += sum(decisions[i] for i in range(num_players) if positions[i] == 3) >= 3
+    model += sum(decisions[i] for i in range(num_players) if positions[i] == 3) <= 5
+    # 1-3 attackers
+    model += sum(decisions[i] for i in range(num_players) if positions[i] == 4) >= 1
+    model += sum(decisions[i] for i in range(num_players) if positions[i] == 4) <= 3
+
+    # club constraint
+    for club_id in np.unique(clubs):
+        model += sum(decisions[i] for i in range(num_players) if clubs[i] == club_id) <= 3  # max 3 players
+
+    model += sum(captain_decisions) == 1  # 1 captain
+
+    for i in range(num_players):  # captain must also be on team
+        model += (decisions[i] - captain_decisions[i]) >= 0
+
+    model.solve()
+    return decisions, captain_decisions
 
 
 def rapid_api_call(url):
