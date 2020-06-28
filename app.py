@@ -1,4 +1,5 @@
 import flask
+#from flask_talisman import Talisman
 import pickle
 import numpy as np
 import pandas as pd
@@ -8,6 +9,7 @@ import pymongo
 from pymongo import MongoClient
 
 app = flask.Flask(__name__, template_folder='templates')
+#Talisman(app)
 
 # env_variables
 # MONGODB = os.getenv('MONGODB', None)
@@ -18,7 +20,7 @@ MONGODB = "mlfc"
 cluster = MongoClient("mongodb+srv://jackculpan:{}@cluster0-vamzb.gcp.mongodb.net/mlfc".format(MONGODB))
 db = cluster["mlfc"]
 players_df = pd.read_csv("https://raw.githubusercontent.com/jackculpan/mlfc/master/2016-2020_extra_gw_stats.csv")
-
+players_raw = pd.read_csv("https://raw.githubusercontent.com/vaastav/Fantasy-Premier-League/master/data/2019-20/players_raw.csv")
 # with open(f'model/rfr.pkl', 'rb') as f:
 #     model = pickle.load(f)
 
@@ -38,25 +40,22 @@ def main():
     team_info = get_team(session, user_id)
     chips = [{"name":team_info['chips'][i]['name'], "value":team_info['chips'][i]['status_for_entry']} for i in range(len(team_info['chips']))]
     latest_teams = players_df[players_df['season'] == 19]
-    #latest_teams = latest_teams[latest_teams['round']==max(latest_teams['round'])]
     latest_teams = latest_teams[latest_teams['round']==gameweek]
     players = [latest_teams[latest_teams['id']==team_info['picks'][i]['element']] for i in range(len(team_info['picks']))]
     players = pd.concat(players)
+    players = pd.merge(players, players_raw, on='id')
+
+    print(players)
 
     if len(players) > 1:
-      #gameweek=39
-      #players_db = [return_prediction(players['id'].iloc[i]) for i in range(len(players))]
-      #print(players_db)
-      #players['prediction'] = [(float(players_db[i]['prediction']) for i in range(len(players)))]
-      #players['team_short_name'] = [players_db[i]['team_short_name'] for i in range(len(players))]
-      #players['opponent_short_team_name'] = [players_db[i]['opponent_short_team_name'] for i in range(len(players))]
       players['prediction'] = [float(return_prediction(players['id'].iloc[i], gameweek)['prediction']) for i in range(len(players))]
-      #players['prediction'] = predictions
       players['team_short_name'] = [return_prediction(players['id'].iloc[i],gameweek)['team_short_name'] for i in range(len(players))]
       players['opponent_short_team_name'] = [return_prediction(players['id'].iloc[i],gameweek)['opponent_short_team_name'] for i in range(len(players))]
       players['was_home'] = [return_prediction(players['id'].iloc[i],gameweek)['was_home'] for i in range(len(players))]
 
       for i in range(len(players)):
+        if players['chance_of_playing_next_round'].iloc[i] == 0:
+          players['prediction'].iloc[i] = 0.0
         if players['was_home'].iloc[i] == "True":
           players['team_short_name'].iloc[i]=str(players['team_short_name'].iloc[i]) + " (H)"
         elif players['was_home'].iloc[i] == "False":
@@ -99,30 +98,33 @@ def main():
 
 @app.route('/dreamteam', methods=['GET'])
 def dream_team():
-  latest_teams = pd.read_csv('https://raw.githubusercontent.com/jackculpan/Fantasy-Premier-League/master/data/2019-20/players_raw.csv')
+  latest_teams = pd.read_csv('https://raw.githubusercontent.com/vaastav/Fantasy-Premier-League/master/data/2019-20/players_raw.csv')
+  latest_teams['chance_of_playing_next_round'].replace("None", 100, inplace=True)
+  latest_teams['chance_of_playing_next_round'] = pd.to_numeric(latest_teams['chance_of_playing_next_round'])
   gameweek = 41
-  #gameround = 32
-  #latest_teams = players_df[players_df['season'] == 19]
-  #print(latest_teams)
+
+  ids = []
+  print(latest_teams[latest_teams.web_name=="Agüero"].chance_of_playing_next_round)
+  for i in range(len(latest_teams)):
+    if latest_teams['chance_of_playing_next_round'].iloc[i] < 50:
+      ids.append(latest_teams['id'].iloc[i])
+
+  cond = latest_teams['id'].isin(ids)
+  latest_teams.drop(latest_teams[cond].index, inplace = True)
+
 
   collection = db["lstm_predictions_total"]
   top_20 = pd.DataFrame(collection.find({"event":gameweek}))
   top_20 = top_20.sort_values('prediction', ascending=False)
   players = [latest_teams[latest_teams['id'] == top_20['id'].iloc[i]] for i in range(len(top_20))]
-
   players = pd.concat(players)
-  # players['prediction'] = np.zeros(len(players))
-  # for i in range(len(players)):
-  #   for j in range(len(top_20)):
-  #     if players['id'].iloc[i] == top_20['id'].iloc[j]:
-  #       players['prediction'].iloc[i] = float(top_20['prediction'].iloc[j])
 
   players = pd.merge(players, top_20, on='id')
   players['prediction'] = pd.to_numeric(players['prediction'])
 
+
   names = players.web_name
   prices = players['now_cost']/10
-  #dreamteam = return_dreamteam(players)
   captain_selection=[]
   selection,sub_selection = [],[]
 
@@ -139,12 +141,6 @@ def dream_team():
         #print("**SUBS: {}** Points = {}, Price = {}".format(names[i], players.prediction[i], prices[i]))
         sub_selection.append(names[i])
 
-  # for i in range(players.shape[0]):
-
-
-  # for i in range(players.shape[0]):
-
-
   subs = [players[players.web_name == sub_selection[i]] for i in range(len(sub_selection))]
   subs = pd.concat(subs)
 
@@ -154,15 +150,10 @@ def dream_team():
   for i in range(len(players)):
     if players['was_home'].iloc[i] == "True":
       players['team_short_name'].iloc[i]=str(players['team_short_name'].iloc[i]) + " (H)"
-    elif players['was_home'].iloc[i] == "False":
+    if players['was_home'].iloc[i] == "False":
       players['opponent_short_team_name'].iloc[i]=str(players['opponent_short_team_name'].iloc[i]) + " (H)"
-
-  for i in range(len(players)):
     if players['web_name'].iloc[i] == captain_selection[0]:
       players['prediction'].iloc[i] = players['prediction'].iloc[i] * 2
-    #   players['web_name'].iloc[i] = (players['web_name'].iloc[i] + " (C)")
-    # if players['web_name'].iloc[i] == captain_selection[1]:
-    #   players['web_name'].iloc[i] = (players['web_name'].iloc[i] + " (VC)")
 
   for i in range(len(subs)):
     if subs['was_home'].iloc[i] == "True":
@@ -172,7 +163,6 @@ def dream_team():
 
   captains = [players[players.web_name == captain_selection[i]] for i in range(len(captain_selection))]
   captains = pd.concat(captains)
-
 
   strikers = players[players.element_type==4]
   midfielders = players[players.element_type==3]
