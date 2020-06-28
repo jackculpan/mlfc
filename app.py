@@ -21,8 +21,6 @@ cluster = MongoClient("mongodb+srv://jackculpan:{}@cluster0-vamzb.gcp.mongodb.ne
 db = cluster["mlfc"]
 players_df = pd.read_csv("https://raw.githubusercontent.com/jackculpan/mlfc/master/2016-2020_extra_gw_stats.csv")
 players_raw = pd.read_csv("https://raw.githubusercontent.com/vaastav/Fantasy-Premier-League/master/data/2019-20/players_raw.csv")
-# with open(f'model/rfr.pkl', 'rb') as f:
-#     model = pickle.load(f)
 
 @app.route('/', methods=['GET', 'POST'])
 def main():
@@ -40,7 +38,7 @@ def main():
     team_info = get_team(session, user_id)
     chips = [{"name":team_info['chips'][i]['name'], "value":team_info['chips'][i]['status_for_entry']} for i in range(len(team_info['chips']))]
     latest_teams = players_df[players_df['season'] == 19]
-    latest_teams = latest_teams[latest_teams['round']==gameweek]
+    latest_teams = latest_teams[latest_teams['round']==max(latest_teams['round'])]
     players = [latest_teams[latest_teams['id']==team_info['picks'][i]['element']] for i in range(len(team_info['picks']))]
     players = pd.concat(players)
     players = pd.merge(players, players_raw, on='id')
@@ -104,7 +102,6 @@ def dream_team():
   gameweek = 41
 
   ids = []
-  print(latest_teams[latest_teams.web_name=="Agüero"].chance_of_playing_next_round)
   for i in range(len(latest_teams)):
     if latest_teams['chance_of_playing_next_round'].iloc[i] < 50:
       ids.append(latest_teams['id'].iloc[i])
