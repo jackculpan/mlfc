@@ -155,6 +155,13 @@ def dream_team():
     elif players['was_home'].iloc[i] == "False":
       players['opponent_short_team_name'].iloc[i]=str(players['opponent_short_team_name'].iloc[i]) + " (H)"
 
+  for i in range(len(players)):
+    if players['web_name'].iloc[i] == captain_selection[0]:
+      players['prediction'].iloc[i] = players['prediction'].iloc[i] * 2
+    #   players['web_name'].iloc[i] = (players['web_name'].iloc[i] + " (C)")
+    # if players['web_name'].iloc[i] == captain_selection[1]:
+    #   players['web_name'].iloc[i] = (players['web_name'].iloc[i] + " (VC)")
+
   for i in range(len(subs)):
     if subs['was_home'].iloc[i] == "True":
       subs['team_short_name'].iloc[i]=str(subs['team_short_name'].iloc[i]) + " (H)"
@@ -163,6 +170,7 @@ def dream_team():
 
   captains = [players[players.web_name == captain_selection[i]] for i in range(len(captain_selection))]
   captains = pd.concat(captains)
+
 
   strikers = players[players.element_type==4]
   midfielders = players[players.element_type==3]
