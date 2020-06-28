@@ -21,6 +21,8 @@ cluster = MongoClient("mongodb+srv://jackculpan:{}@cluster0-vamzb.gcp.mongodb.ne
 db = cluster["mlfc"]
 players_df = pd.read_csv("https://raw.githubusercontent.com/jackculpan/mlfc/master/2016-2020_extra_gw_stats.csv")
 players_raw = pd.read_csv("https://raw.githubusercontent.com/vaastav/Fantasy-Premier-League/master/data/2019-20/players_raw.csv")
+players_raw['chance_of_playing_next_round'].replace("None", 100, inplace=True)
+players_raw['chance_of_playing_next_round'] = pd.to_numeric(players_raw['chance_of_playing_next_round'])
 
 @app.route('/', methods=['GET', 'POST'])
 def main():
@@ -42,8 +44,6 @@ def main():
     players = [latest_teams[latest_teams['id']==team_info['picks'][i]['element']] for i in range(len(team_info['picks']))]
     players = pd.concat(players)
     players = pd.merge(players, players_raw, on='id')
-
-    print(players)
 
     if len(players) > 1:
       players['prediction'] = [float(return_prediction(players['id'].iloc[i], gameweek)['prediction']) for i in range(len(players))]
