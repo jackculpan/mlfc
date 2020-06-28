@@ -130,18 +130,20 @@ def dream_team():
 
   for i in range(players.shape[0]):
     if decisions[i].value() != 0:
-        print("**{}** Points = {}, Price = {}".format(names[i], players.prediction[i], prices[i]))
+        #print("**{}** Points = {}, Price = {}".format(names[i], players.prediction[i], prices[i]))
         selection.append(names[i])
-
-  for i in range(players.shape[0]):
     if captain_decisions[i].value() == 1:
-        print("**CAPTAIN: {}** Points = {}, Price = {}".format(names[i], players.prediction[i], prices[i]))
+        #print("**CAPTAIN: {}** Points = {}, Price = {}".format(names[i], players.prediction[i], prices[i]))
         captain_selection.append(names[i])
-
-  for i in range(players.shape[0]):
     if sub_decisions[i].value() == 1:
-        print("**SUBS: {}** Points = {}, Price = {}".format(names[i], players.prediction[i], prices[i]))
+        #print("**SUBS: {}** Points = {}, Price = {}".format(names[i], players.prediction[i], prices[i]))
         sub_selection.append(names[i])
+
+  # for i in range(players.shape[0]):
+
+
+  # for i in range(players.shape[0]):
+
 
   subs = [players[players.web_name == sub_selection[i]] for i in range(len(sub_selection))]
   subs = pd.concat(subs)
@@ -181,6 +183,7 @@ def dream_team():
   sub_points = int(sum(subs.prediction))
 
   return flask.render_template('dreamteam.html',
+                               gameweek=(gameweek),
                                strikers=(zip(strikers['web_name'], strikers['team_short_name'], strikers['opponent_short_team_name'], strikers['prediction'].round())),\
                                midfielders=(zip(midfielders['web_name'],midfielders['team_short_name'], midfielders['opponent_short_team_name'], midfielders['prediction'].round())), \
                                defenders=(zip(defenders['web_name'], defenders['team_short_name'], defenders['opponent_short_team_name'], defenders['prediction'].round())), \
