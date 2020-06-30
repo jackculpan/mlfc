@@ -20,7 +20,12 @@ MONGODB = "mlfc"
 cluster = MongoClient("mongodb+srv://jackculpan:{}@cluster0-vamzb.gcp.mongodb.net/mlfc".format(MONGODB))
 db = cluster["mlfc"]
 players_df = pd.read_csv("https://raw.githubusercontent.com/jackculpan/mlfc/master/2016-2020_extra_gw_stats.csv")
-players_raw = pd.read_csv("https://raw.githubusercontent.com/vaastav/Fantasy-Premier-League/master/data/2019-20/players_raw.csv")
+# players_raw = pd.read_csv("https://raw.githubusercontent.com/vaastav/Fantasy-Premier-League/master/data/2019-20/players_raw.csv")
+# players_raw['chance_of_playing_next_round'].replace("None", 100, inplace=True)
+# players_raw['chance_of_playing_next_round'] = pd.to_numeric(players_raw['chance_of_playing_next_round'])
+
+data = json.loads((requests.get('https://fantasy.premierleague.com/api/bootstrap-static/')).content)
+players_raw = pd.DataFrame(data['elements'])
 players_raw['chance_of_playing_next_round'].replace("None", 100, inplace=True)
 players_raw['chance_of_playing_next_round'] = pd.to_numeric(players_raw['chance_of_playing_next_round'])
 
@@ -52,7 +57,7 @@ def main():
       players['was_home'] = [return_prediction(players['id'].iloc[i],gameweek)['was_home'] for i in range(len(players))]
 
       for i in range(len(players)):
-        if players['chance_of_playing_next_round'].iloc[i] == 0:
+        if players['chance_of_playing_next_round'].iloc[i] < 0:
           players['prediction'].iloc[i] = 0.0
         if players['was_home'].iloc[i] == "True":
           players['team_short_name'].iloc[i]=str(players['team_short_name'].iloc[i]) + " (H)"
