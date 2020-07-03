@@ -104,7 +104,7 @@ def dream_team():
   latest_teams = pd.read_csv('https://raw.githubusercontent.com/vaastav/Fantasy-Premier-League/master/data/2019-20/players_raw.csv')
   latest_teams['chance_of_playing_next_round'].replace("None", 100, inplace=True)
   latest_teams['chance_of_playing_next_round'] = pd.to_numeric(latest_teams['chance_of_playing_next_round'])
-  gameweek = 41
+  gameweek = get_recent_gameweek_id()
 
   ids = []
   for i in range(len(latest_teams)):
@@ -334,6 +334,21 @@ def return_upcoming_fixture(player_id):
     collection = db["lstm_predictions"]
     player = collection.find_one({"id":int(player_id)})
     return player['opponent_team_name']
+
+def get_recent_gameweek_id():
+    """
+    Get's the most recent gameweek's ID.
+    """
+
+    data = requests.get('https://fantasy.premierleague.com/api/bootstrap-static/')
+    data = json.loads(data.content)
+
+    gameweeks = data['events']
+    now = datetime.utcnow()
+    for gameweek in gameweeks:
+        next_deadline_date = datetime.strptime(gameweek['deadline_time'], '%Y-%m-%dT%H:%M:%SZ')
+        if next_deadline_date > now:
+            return gameweek['id'] - 1
 
 if __name__ == '__main__':
     app.run(debug=True)
