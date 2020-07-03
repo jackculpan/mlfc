@@ -7,6 +7,7 @@ import requests, json, random, os, schedule, time
 from fpl import FPL
 import pymongo
 from pymongo import MongoClient
+from datetime import datetime
 
 app = flask.Flask(__name__, template_folder='templates')
 #Talisman(app)
@@ -105,6 +106,7 @@ def dream_team():
   latest_teams['chance_of_playing_next_round'].replace("None", 100, inplace=True)
   latest_teams['chance_of_playing_next_round'] = pd.to_numeric(latest_teams['chance_of_playing_next_round'])
   gameweek = get_recent_gameweek_id()
+  print(gameweek)
 
   ids = []
   for i in range(len(latest_teams)):
