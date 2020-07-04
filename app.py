@@ -101,7 +101,7 @@ def main():
 
 
 @app.route('/dreamteam', methods=['GET', 'POST'])
-def dream_team():
+def dreamteam():
   if flask.request.method == 'GET':
     gameweek = get_recent_gameweek_id()
   if flask.request.method == 'POST':
