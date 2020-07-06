@@ -52,17 +52,32 @@ def main():
     players = pd.merge(players, players_raw, on='id')
 
     if len(players) > 1:
-      players['prediction'] = [float(return_prediction(players['id'].iloc[i], gameweek)['prediction']) for i in range(len(players))]
-      players['team_short_name'] = [return_prediction(players['id'].iloc[i],gameweek)['team_short_name'] for i in range(len(players))]
-      players['opponent_short_team_name'] = [return_prediction(players['id'].iloc[i],gameweek)['opponent_short_team_name'] for i in range(len(players))]
-      players['was_home'] = [return_prediction(players['id'].iloc[i],gameweek)['was_home'] for i in range(len(players))]
+      collection = db["lstm_predictions_total"]
+      preds =[]
+      opp_short=[]
+      for player_id in players['id']:
+        player = collection.find_one({"id":int(player_id), "event":gameweek})
+        preds.append(float(player['prediction']))
+        opp_short.append(player['opponent_short_team_name'])
+      #gw_players = [gw_players[gw_players['id'] == players['id'].iloc[i]] for i in range(len(players))]
+      #gw_players = pd.concat(gw_players)
+      #print(gw_players)
+      #players = pd.merge(players, gw_players[['id','was_home', 'team_short_name', 'opponent_short_team_name','prediction']], on='id', )
+      players['prediction'] = preds
+      players['opponent_short_team_name']= opp_short
+      #players['prediction'] = pd.to_numeric(players['prediction'])
+
+      #players['prediction'] = [float(return_prediction(players['id'].iloc[i], gameweek)['prediction']) for i in range(len(players))]
+      #players['team_short_name'] = [return_prediction(players['id'].iloc[i],gameweek)['team_short_name'] for i in range(len(players))]
+      #players['opponent_short_team_name'] = [return_prediction(players['id'].iloc[i],gameweek)['opponent_short_team_name'] for i in range(len(players))]
+      #players['was_home'] = [return_prediction(players['id'].iloc[i],gameweek)['was_home'] for i in range(len(players))]
 
       for i in range(len(players)):
         if players['chance_of_playing_next_round'].iloc[i] < 0:
           players['prediction'].iloc[i] = 0.0
-        if players['was_home'].iloc[i] == "True":
+        if players['was_home'].iloc[i] == True:
           players['team_short_name'].iloc[i]=str(players['team_short_name'].iloc[i]) + " (H)"
-        elif players['was_home'].iloc[i] == "False":
+        if players['was_home'].iloc[i] == False:
           players['opponent_short_team_name'].iloc[i]=str(players['opponent_short_team_name'].iloc[i]) + " (H)"
         if team_info['picks'][i]['is_captain'] == True:
           element = team_info['picks'][i]['element']
@@ -88,6 +103,7 @@ def main():
     sub_points = int(sum(subs.prediction))
 
     return flask.render_template('main.html',
+                                 gameweek=(gameweek),
                                  original_input={'user_id':int(user_id), 'email':str(email),'password':str(password)},
                                  strikers=(zip(strikers['name'], strikers['team_short_name'], strikers['opponent_short_team_name'], strikers['prediction'].round())),\
                                  midfielders=(zip(midfielders['name'],midfielders['team_short_name'], midfielders['opponent_short_team_name'], midfielders['prediction'].round())), \
