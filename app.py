@@ -134,6 +134,8 @@ def return_dreamteam(gameweek):
     players = latest_teams[latest_teams['round']==max(latest_teams['round'])]
     players = pd.merge(players, players_raw, on='id')
 
+    print(players)
+
     if len(players) > 1:
       collection = db["lstm_predictions_total"]
       players['prediction'] = np.zeros(len(players))
