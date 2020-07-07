@@ -53,18 +53,19 @@ def main():
 
     if len(players) > 1:
       collection = db["lstm_predictions_total"]
-      preds =[]
-      opp_short=[]
-      for player_id in players['id']:
-        player = collection.find_one({"id":int(player_id), "event":gameweek})
-        preds.append(float(player['prediction']))
-        opp_short.append(player['opponent_short_team_name'])
+      players['prediction'] = np.zeros(len(players))
+      players['opponent_short_team_name']= ""
+      for i in range(len(players)):
+        if collection.find_one({"id":str(players['id'].iloc[i]), "event":gameweek}) != None:
+          player = collection.find_one({"id":str(players['id'].iloc[i]), "event":gameweek})
+          players['prediction'].iloc[i] = float(player['prediction'])
+          players['opponent_short_team_name'].iloc[i] = player['opponent_short_team_name']
+
       #gw_players = [gw_players[gw_players['id'] == players['id'].iloc[i]] for i in range(len(players))]
       #gw_players = pd.concat(gw_players)
       #print(gw_players)
       #players = pd.merge(players, gw_players[['id','was_home', 'team_short_name', 'opponent_short_team_name','prediction']], on='id', )
-      players['prediction'] = preds
-      players['opponent_short_team_name']= opp_short
+
       #players['prediction'] = pd.to_numeric(players['prediction'])
 
       #players['prediction'] = [float(return_prediction(players['id'].iloc[i], gameweek)['prediction']) for i in range(len(players))]
@@ -126,28 +127,59 @@ def dreamteam():
 
 
 def return_dreamteam(gameweek):
-    latest_teams = pd.read_csv('https://raw.githubusercontent.com/vaastav/Fantasy-Premier-League/master/data/2019-20/players_raw.csv')
-    latest_teams['chance_of_playing_next_round'].replace("None", 100, inplace=True)
-    latest_teams['chance_of_playing_next_round'] = pd.to_numeric(latest_teams['chance_of_playing_next_round'])
+    # latest_teams = pd.read_csv('https://raw.githubusercontent.com/vaastav/Fantasy-Premier-League/master/data/2019-20/players_raw.csv')
+    # latest_teams['chance_of_playing_next_round'].replace("None", 100, inplace=True)
+    # latest_teams['chance_of_playing_next_round'] = pd.to_numeric(latest_teams['chance_of_playing_next_round'])
+    latest_teams = players_df[players_df['season'] == 19]
+    players = latest_teams[latest_teams['round']==max(latest_teams['round'])]
+    players = pd.merge(players, players_raw, on='id')
 
-    ids = []
-    for i in range(len(latest_teams)):
-      if latest_teams['chance_of_playing_next_round'].iloc[i] < 50:
-        ids.append(latest_teams['id'].iloc[i])
+    if len(players) > 1:
+      collection = db["lstm_predictions_total"]
+      players['prediction'] = np.zeros(len(players))
+      players['opponent_short_team_name']= ""
+      for i in range(len(players)):
+        if collection.find_one({"id":str(players['id'].iloc[i]), "event":gameweek}) != None:
+          player = collection.find_one({"id":str(players['id'].iloc[i]), "event":gameweek})
+          players['prediction'].iloc[i] = float(player['prediction'])
+          players['opponent_short_team_name'].iloc[i] = player['opponent_short_team_name']
 
-    cond = latest_teams['id'].isin(ids)
-    latest_teams.drop(latest_teams[cond].index, inplace = True)
+
+    #     ids.append(latest_teams['id'].iloc[i])
+
+    # cond = latest_teams['id'].isin(ids)
+    # latest_teams.drop(latest_teams[cond].index, inplace = True)
+    # players = latest_teams
+
+    # print(latest_teams)
+
+    # top_20 = pd.DataFrame(collection.find({"event":gameweek}))
 
 
-    collection = db["lstm_predictions_total"]
-    top_20 = pd.DataFrame(collection.find({"event":gameweek}))
-    top_20 = top_20.sort_values('prediction', ascending=False)
-    players = [latest_teams[latest_teams['id'] == top_20['id'].iloc[i]] for i in range(len(top_20))]
-    players = pd.concat(players)
+    # for player_id in players['id']:
+    #   if collection.find_one({"id":int(player_id), "event":gameweek}):
+    #     player = collection.find_one({"id":int(player_id), "event":gameweek})
+    #   else:
+    #   print(player)
+    #   preds.append(float(player['prediction']))
+    #   opp_short.append(player['opponent_short_team_name'])
+    # players['prediction'] = preds
+    # players['opponent_short_team_name']= opp_short
 
-    players = pd.merge(players, top_20, on='id')
-    players['prediction'] = pd.to_numeric(players['prediction'])
 
+    # print(top_20)
+
+    # players = [latest_teams[latest_teams['id'] == top_20['id'].iloc[i]] for i in range(len(top_20))]
+    # players = pd.concat(players)
+
+    # #print(players)
+
+    # players = pd.merge(players, top_20, on='id')
+    # players['prediction'] = pd.to_numeric(players['prediction'])
+
+
+    print(f"gameweek ={gameweek}=")
+    #print(players)
 
     names = players.web_name
     prices = players['now_cost']/10
