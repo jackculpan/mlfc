@@ -90,6 +90,7 @@ def main():
           vice_captain = players[players['id']==element].name.values[0]
           # players[players['id']==element]['name'] = str(players[players['id']==element].name.values[0] + " (VC)")
 
+    players['kit'] = ""
     subs = players.iloc[-4:].copy()
     cond = players['id'].isin(subs['id'])
     players.drop(players[cond].index, inplace = True)
@@ -171,7 +172,7 @@ def return_dreamteam(gameweek):
 
     # print(f"gameweek ={gameweek}=")
     #print(players)
-
+    dreamteam_players['kit'] = ""
     dreamteam_players = dreamteam_players[dreamteam_players['minutes_x'].values>0]
     dreamteam_players = dreamteam_players[dreamteam_players['chance_of_playing_next_round'].values > 50]
     dreamteam_players= dreamteam_players.reset_index()
