@@ -21,9 +21,8 @@ MONGODB = "mlfc"
 cluster = MongoClient("mongodb+srv://jackculpan:{}@cluster0-vamzb.gcp.mongodb.net/mlfc".format(MONGODB))
 db = cluster["mlfc"]
 players_df = pd.read_csv("https://raw.githubusercontent.com/jackculpan/mlfc/master/2016-2020_extra_gw_stats.csv")
-# players_raw = pd.read_csv("https://raw.githubusercontent.com/vaastav/Fantasy-Premier-League/master/data/2019-20/players_raw.csv")
-# players_raw['chance_of_playing_next_round'].replace("None", 100, inplace=True)
-# players_raw['chance_of_playing_next_round'] = pd.to_numeric(players_raw['chance_of_playing_next_round'])
+latest_teams = players_df[players_df['season'] == 19]
+latest_teams = latest_teams[latest_teams['round']==max(latest_teams['round'])]
 
 data = json.loads((requests.get('https://fantasy.premierleague.com/api/bootstrap-static/')).content)
 players_raw = pd.DataFrame(data['elements'])
@@ -45,8 +44,7 @@ def main():
 
     team_info = get_team(session, user_id)
     chips = [{"name":team_info['chips'][i]['name'], "value":team_info['chips'][i]['status_for_entry']} for i in range(len(team_info['chips']))]
-    latest_teams = players_df[players_df['season'] == 19]
-    latest_teams = latest_teams[latest_teams['round']==max(latest_teams['round'])]
+
     players = [latest_teams[latest_teams['id']==team_info['picks'][i]['element']] for i in range(len(team_info['picks']))]
     players = pd.concat(players)
     players = pd.merge(players, players_raw, on='id')
@@ -127,24 +125,23 @@ def dreamteam():
 
 
 def return_dreamteam(gameweek):
-    # latest_teams = pd.read_csv('https://raw.githubusercontent.com/vaastav/Fantasy-Premier-League/master/data/2019-20/players_raw.csv')
-    # latest_teams['chance_of_playing_next_round'].replace("None", 100, inplace=True)
-    # latest_teams['chance_of_playing_next_round'] = pd.to_numeric(latest_teams['chance_of_playing_next_round'])
-    latest_teams = players_df[players_df['season'] == 19]
-    players = latest_teams[latest_teams['round']==max(latest_teams['round'])]
-    players = pd.merge(players, players_raw, on='id')
+    dreamteam_players = pd.merge(latest_teams, players_raw, on='id')
 
-    print(players)
+    #players = players[['id', 'prediction', 'opponent_short_team_name', 'team_code', 'web_name', 'team_short_name', '']]
 
-    if len(players) > 1:
-      collection = db["lstm_predictions_total"]
-      players['prediction'] = np.zeros(len(players))
-      players['opponent_short_team_name']= ""
-      for i in range(len(players)):
-        if collection.find_one({"id":str(players['id'].iloc[i]), "event":gameweek}) != None:
-          player = collection.find_one({"id":str(players['id'].iloc[i]), "event":gameweek})
-          players['prediction'].iloc[i] = float(player['prediction'])
-          players['opponent_short_team_name'].iloc[i] = player['opponent_short_team_name']
+    #print(players[['team_code', 'team_id']])
+
+    # if len(players) > 1:
+    #   collection = db["lstm_predictions_total"]
+    #   players['prediction'] = np.zeros(len(players))
+    #   players['opponent_short_team_name']= ""
+    #   for i in range(len(players)):
+    #     if collection.find_one({"id":str(players['id'].iloc[i]), "event":gameweek}) != None:
+    #       player = collection.find_one({"id":str(players['id'].iloc[i]), "event":gameweek})
+    #       players['prediction'].iloc[i] = float(player['prediction'])
+    #       players['opponent_short_team_name'].iloc[i] = player['opponent_short_team_name']
+
+    # players = players[players['prediction'] > 0]
 
 
     #     ids.append(latest_teams['id'].iloc[i])
@@ -154,9 +151,13 @@ def return_dreamteam(gameweek):
     # players = latest_teams
 
     # print(latest_teams)
-
-    # top_20 = pd.DataFrame(collection.find({"event":gameweek}))
-
+    collection = db["lstm_predictions_total"]
+    top_20 = pd.DataFrame(collection.find({"event":gameweek}))
+    top_20['id']=top_20['id'].astype(int)
+    dreamteam_players['id']=dreamteam_players['id'].astype(int)
+    # top_20['opponent_team_name']=top_20['id'].astype(int)
+    # top_20 = ['was_home', 'team_short_name', 'opponent_team_name', 'opponent_team']
+    top_20 = top_20[['id', 'event', 'opponent_short_team_name', 'prediction']]
 
     # for player_id in players['id']:
     #   if collection.find_one({"id":int(player_id), "event":gameweek}):
@@ -169,28 +170,33 @@ def return_dreamteam(gameweek):
     # players['opponent_short_team_name']= opp_short
 
 
-    # print(top_20)
+    print(top_20)
+    print(dreamteam_players.columns)
+    # top_20['id'] = pd.to_numeric(top_20['id'])
 
-    # players = [latest_teams[latest_teams['id'] == top_20['id'].iloc[i]] for i in range(len(top_20))]
-    # players = pd.concat(players)
+    dreamteam_players = [dreamteam_players[dreamteam_players['id'] == top_20['id'].iloc[i]] for i in range(len(top_20))]
+    dreamteam_players = pd.concat(dreamteam_players)
 
-    # #print(players)
 
-    # players = pd.merge(players, top_20, on='id')
-    # players['prediction'] = pd.to_numeric(players['prediction'])
-
+    dreamteam_players = pd.merge(top_20, dreamteam_players, on='id')
+    dreamteam_players['prediction'] = pd.to_numeric(dreamteam_players['prediction'])
 
     print(f"gameweek ={gameweek}=")
     #print(players)
 
-    names = players.web_name
-    prices = players['now_cost']/10
+    dreamteam_players = dreamteam_players[dreamteam_players['minutes_x'].values[0]>0]
+    print(dreamteam_players)
+    dreamteam_players= dreamteam_players.reset_index()
+    print(dreamteam_players)
+
+    names = dreamteam_players.web_name
+    prices = dreamteam_players['now_cost']/10
     captain_selection=[]
     selection,sub_selection = [],[]
 
-    decisions, captain_decisions, sub_decisions = select_team(players.prediction, prices, players.element_type, players.team_code)
+    decisions, captain_decisions, sub_decisions = select_team(dreamteam_players.prediction, prices, dreamteam_players.element_type, dreamteam_players.team_id)
 
-    for i in range(players.shape[0]):
+    for i in range(dreamteam_players.shape[0]):
       if decisions[i].value() != 0:
           #print("**{}** Points = {}, Price = {}".format(names[i], players.prediction[i], prices[i]))
           selection.append(names[i])
@@ -201,35 +207,39 @@ def return_dreamteam(gameweek):
           #print("**SUBS: {}** Points = {}, Price = {}".format(names[i], players.prediction[i], prices[i]))
           sub_selection.append(names[i])
 
-    subs = [players[players.web_name == sub_selection[i]] for i in range(len(sub_selection))]
+    subs = [dreamteam_players[dreamteam_players.web_name == sub_selection[i]] for i in range(len(sub_selection))]
     subs = pd.concat(subs)
 
-    players = [players[players.web_name == selection[i]] for i in range(len(selection))]
-    players = pd.concat(players)
+    dreamteam_players = [dreamteam_players[dreamteam_players.web_name == selection[i]] for i in range(len(selection))]
+    dreamteam_players = pd.concat(dreamteam_players)
 
-    for i in range(len(players)):
-      if players['was_home'].iloc[i] == "True":
-        players['team_short_name'].iloc[i]=str(players['team_short_name'].iloc[i]) + " (H)"
-      if players['was_home'].iloc[i] == "False":
-        players['opponent_short_team_name'].iloc[i]=str(players['opponent_short_team_name'].iloc[i]) + " (H)"
-      if players['web_name'].iloc[i] == captain_selection[0]:
-        players['prediction'].iloc[i] = players['prediction'].iloc[i] * 2
+    print(dreamteam_players[['team_short_name']])
+    print(dreamteam_players)
+
+
+    for i in range(len(dreamteam_players)):
+      if dreamteam_players['was_home'].iloc[i] == "True":
+        dreamteam_players['team_short_name'].iloc[i]=str(dreamteam_players['team_short_name'].iloc[i]) + " (H)"
+      if dreamteam_players['was_home'].iloc[i] == "False":
+        dreamteam_players['opponent_short_team_name'].iloc[i]=str(dreamteam_players['opponent_short_team_name'].iloc[i]) + " (H)"
+      if dreamteam_players['web_name'].iloc[i] == captain_selection[0]:
+        dreamteam_players['prediction'].iloc[i] = dreamteam_players['prediction'].iloc[i] * 2
 
     for i in range(len(subs)):
       if subs['was_home'].iloc[i] == "True":
         subs['team_short_name'].iloc[i]=str(subs['team_short_name'].iloc[i]) + " (H)"
-      elif players['was_home'].iloc[i] == "False":
+      elif subs['was_home'].iloc[i] == "False":
         subs['opponent_short_team_name'].iloc[i]=str(subs['opponent_short_team_name'].iloc[i]) + " (H)"
 
-    captains = [players[players.web_name == captain_selection[i]] for i in range(len(captain_selection))]
+    captains = [dreamteam_players[dreamteam_players.web_name == captain_selection[i]] for i in range(len(captain_selection))]
     captains = pd.concat(captains)
 
-    strikers = players[players.element_type==4]
-    midfielders = players[players.element_type==3]
-    defenders = players[players.element_type==2]
-    goalkeepers = players[players.element_type==1]
+    strikers = dreamteam_players[dreamteam_players.element_type==4]
+    midfielders = dreamteam_players[dreamteam_players.element_type==3]
+    defenders = dreamteam_players[dreamteam_players.element_type==2]
+    goalkeepers = dreamteam_players[dreamteam_players.element_type==1]
 
-    team_points = int(sum(players.prediction))
+    team_points = int(sum(dreamteam_players.prediction))
     sub_points = int(sum(subs.prediction))
 
     return flask.render_template('dreamteam.html',
