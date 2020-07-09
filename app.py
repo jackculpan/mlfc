@@ -155,24 +155,8 @@ def return_dreamteam(gameweek):
     top_20 = pd.DataFrame(collection.find({"event":gameweek}))
     top_20['id']=top_20['id'].astype(int)
     dreamteam_players['id']=dreamteam_players['id'].astype(int)
-    # top_20['opponent_team_name']=top_20['id'].astype(int)
-    # top_20 = ['was_home', 'team_short_name', 'opponent_team_name', 'opponent_team']
     top_20 = top_20[['id', 'event', 'opponent_short_team_name', 'prediction']]
 
-    # for player_id in players['id']:
-    #   if collection.find_one({"id":int(player_id), "event":gameweek}):
-    #     player = collection.find_one({"id":int(player_id), "event":gameweek})
-    #   else:
-    #   print(player)
-    #   preds.append(float(player['prediction']))
-    #   opp_short.append(player['opponent_short_team_name'])
-    # players['prediction'] = preds
-    # players['opponent_short_team_name']= opp_short
-
-
-    print(top_20)
-    print(dreamteam_players.columns)
-    # top_20['id'] = pd.to_numeric(top_20['id'])
 
     dreamteam_players = [dreamteam_players[dreamteam_players['id'] == top_20['id'].iloc[i]] for i in range(len(top_20))]
     dreamteam_players = pd.concat(dreamteam_players)
@@ -181,13 +165,13 @@ def return_dreamteam(gameweek):
     dreamteam_players = pd.merge(top_20, dreamteam_players, on='id')
     dreamteam_players['prediction'] = pd.to_numeric(dreamteam_players['prediction'])
 
-    print(f"gameweek ={gameweek}=")
+    # print(f"gameweek ={gameweek}=")
     #print(players)
 
-    dreamteam_players = dreamteam_players[dreamteam_players['minutes_x'].values[0]>0]
-    print(dreamteam_players)
+    dreamteam_players = dreamteam_players[dreamteam_players['minutes_x'].values>0]
+    # print(dreamteam_players)
     dreamteam_players= dreamteam_players.reset_index()
-    print(dreamteam_players)
+    # print(dreamteam_players)
 
     names = dreamteam_players.web_name
     prices = dreamteam_players['now_cost']/10
@@ -212,10 +196,6 @@ def return_dreamteam(gameweek):
 
     dreamteam_players = [dreamteam_players[dreamteam_players.web_name == selection[i]] for i in range(len(selection))]
     dreamteam_players = pd.concat(dreamteam_players)
-
-    print(dreamteam_players[['team_short_name']])
-    print(dreamteam_players)
-
 
     for i in range(len(dreamteam_players)):
       if dreamteam_players['was_home'].iloc[i] == "True":
