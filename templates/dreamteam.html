@@ -18,7 +18,7 @@
         <form action="{{ url_for('dreamteam') }}" method="POST">
           <fieldset>
             <label for="gameweek">Which gameweek would you like a prediction for?</label>
-              <select name="gameweek" id="gameweek">
+              <select name="gameweek" id="gameweek" placeholder="{{ gameweek }}">
                 <option value="41">32+</option>
                 <option value="42">33+</option>
                 <option value="43">34+</option>
@@ -74,7 +74,7 @@
                 </div>
               {% endfor %}
             </div>
-            <h4> Total points: {{ stats[0] }} </h4>
+            <h4> Total points: {{ stats[0] }} | Total cost: £{{ stats[2] }} </h4>
             <br>
             <p> {{ captain[0] }} (C)     |     {{ captain[1] }} (VC) </p>
             <br>
@@ -88,7 +88,7 @@
                 </div>
               {% endfor %}
             </div>
-            <h4> Total points: {{ stats[1] }} </h4>
+            <h4> Total points: {{ stats[1] }} | Total cost: £{{ stats[3] }}  </h4>
             <br>
             </div>
           </div>

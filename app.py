@@ -72,7 +72,7 @@ def main():
       #players['was_home'] = [return_prediction(players['id'].iloc[i],gameweek)['was_home'] for i in range(len(players))]
 
       for i in range(len(players)):
-        if players['chance_of_playing_next_round'].iloc[i] < 0:
+        if players['chance_of_playing_next_round'].iloc[i] > 50:
           players['prediction'].iloc[i] = 0.0
         if players['was_home'].iloc[i] == True:
           players['team_short_name'].iloc[i]=str(players['team_short_name'].iloc[i]) + " (H)"
@@ -85,6 +85,7 @@ def main():
           # players[players['id']==element].name = players[players['id']==element].name.values[0] + " (C)"
         elif team_info['picks'][i]['is_vice_captain'] == True:
           element = team_info['picks'][i]['element']
+          players[players['id']==element].prediction = players[players['id']==element].prediction * 2
           vice_captain = players[players['id']==element].name.values[0]
           # players[players['id']==element]['name'] = str(players[players['id']==element].name.values[0] + " (VC)")
 
@@ -100,6 +101,8 @@ def main():
 
     team_points = int(sum(players.prediction))
     sub_points = int(sum(subs.prediction))
+    team_cost = sum(players.now_cost)/10
+    sub_cost = sum(subs.now_cost)/10
 
     return flask.render_template('main.html',
                                  gameweek=(gameweek),
@@ -109,7 +112,7 @@ def main():
                                  defenders=(zip(defenders['name'], defenders['team_short_name'], defenders['opponent_short_team_name'], defenders['prediction'].round())), \
                                  goalkeepers=(zip(goalkeepers['name'], goalkeepers['team_short_name'], goalkeepers['opponent_short_team_name'],  goalkeepers['prediction'].round())),\
                                  subs=(zip(subs['name'], subs['team_short_name'],subs['opponent_short_team_name'], subs['prediction'].round())),\
-                                 stats=(team_points, sub_points),\
+                                 stats=(team_points, sub_points, team_cost, sub_cost),\
                                  captain=(captain, vice_captain),
                                  chips=(chips)
                                  )
@@ -169,7 +172,7 @@ def return_dreamteam(gameweek):
     #print(players)
 
     dreamteam_players = dreamteam_players[dreamteam_players['minutes_x'].values>0]
-    # print(dreamteam_players)
+    dreamteam_players = dreamteam_players[dreamteam_players['chance_of_playing_next_round'].values > 50]
     dreamteam_players= dreamteam_players.reset_index()
     # print(dreamteam_players)
 
@@ -211,6 +214,8 @@ def return_dreamteam(gameweek):
       elif subs['was_home'].iloc[i] == "False":
         subs['opponent_short_team_name'].iloc[i]=str(subs['opponent_short_team_name'].iloc[i]) + " (H)"
 
+    subs.sort_values(by=['element_type'], inplace=True)
+
     captains = [dreamteam_players[dreamteam_players.web_name == captain_selection[i]] for i in range(len(captain_selection))]
     captains = pd.concat(captains)
 
@@ -221,6 +226,8 @@ def return_dreamteam(gameweek):
 
     team_points = int(sum(dreamteam_players.prediction))
     sub_points = int(sum(subs.prediction))
+    team_cost = sum(dreamteam_players.now_cost)/10
+    sub_cost = sum(subs.now_cost)/10
 
     return flask.render_template('dreamteam.html',
                                  gameweek=(gameweek),
@@ -229,7 +236,7 @@ def return_dreamteam(gameweek):
                                  defenders=(zip(defenders['web_name'], defenders['team_short_name'], defenders['opponent_short_team_name'], defenders['prediction'].round())), \
                                  goalkeepers=(zip(goalkeepers['web_name'], goalkeepers['team_short_name'], goalkeepers['opponent_short_team_name'],  goalkeepers['prediction'].round())),\
                                  subs=(zip(subs['web_name'], subs['team_short_name'],subs['opponent_short_team_name'], subs['prediction'].round())),\
-                                 stats=(team_points, sub_points),\
+                                 stats=(team_points, sub_points, team_cost, sub_cost),\
                                  captain=(captains['web_name'].iloc[0], captains['web_name'].iloc[1]),
                                  )
 
