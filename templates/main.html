@@ -28,6 +28,7 @@
                 <option value="42">33+</option>
                 <option value="43">34+</option>
                 <option value="44">35+</option>
+                <option value="45">36+</option>
               </select>
             <input type="Submit">
           </fieldset>
@@ -42,7 +43,7 @@
             <div class="goalkeepers" style='display: grid;  grid-template-columns: auto; grid-template-rows: 100% 100%; justify-content: center; width:100%; height: 100%;'>
               {% for prediction in goalkeepers %}
                 <div class="item"style='padding-left: 5px; padding-right: 5px;'>
-                  <ul > {{ prediction[4] }} </ul>
+                  <ul > <img src="{{ prediction[4] }}" alt=""> </ul>
                   <ul > {{ prediction[0] }} </ul>
                   <ul > {{ prediction[1] }} vs {{ prediction[2] }} </ul>
                   <ul > {{ prediction[3] }} </ul>
@@ -53,7 +54,7 @@
             <div class="defenders" style='display: grid;  grid-template-columns: auto auto auto auto auto; grid-template-rows: 100% 100%; justify-content: center; width:100%; height: 100%;'>
               {% for prediction in defenders %}
                 <div class="item"style='padding-left: 5px; padding-right: 5px;'>
-                  <ul > {{ prediction[4] }} </ul>
+                  <ul > <img src="{{ prediction[4] }}" alt=""> </ul>
                   <ul > {{ prediction[0] }} </ul>
                   <ul > {{ prediction[1] }} vs {{ prediction[2] }} </ul>
                   <ul > {{ prediction[3] }} </ul>
@@ -61,10 +62,10 @@
               {% endfor %}
             </div>
             <br>
-            <div class="midfielders" style='display: grid;  grid-template-columns: auto auto auto auto auto; grid-template-rows: 50px 50px ; justify-content: center;width:100%; height: 100%;'>
+            <div class="midfielders" style='display: grid;  grid-template-columns: auto auto auto auto auto; grid-template-rows: 100% 100% ; justify-content: center;width:100%; height: 100%;'>
               {% for prediction in midfielders %}
                 <div class="item"style='padding-left: 5px; padding-right: 5px;'>
-                  <ul > {{ prediction[4] }} </ul>
+                  <ul > <img src="{{ prediction[4] }}" alt=""> </ul>
                   <ul > {{ prediction[0] }} </ul>
                   <ul > {{ prediction[1] }} vs {{ prediction[2] }} </ul>
                   <ul > {{ prediction[3] }} </ul>
@@ -72,34 +73,36 @@
               {% endfor %}
             </div>
             <br>
-            <div class="strikers" style='display: grid;  grid-template-columns: auto auto auto auto auto; grid-template-rows: 50px 50px; justify-content: center;width:100%; height: 100%;'>
+            <div class="strikers" style='display: grid;  grid-template-columns: auto auto auto auto auto; grid-template-rows: 100% 100%; justify-content: center;width:100%; height: 100%;'>
               {% for prediction in strikers %}
                 <div class="item"style='padding-left: 5px; padding-right: 5px;'>
-                  <ul > {{ prediction[4] }} </ul>
+                  <ul > <img src="{{ prediction[4] }}" alt=""> </ul>
                   <ul > {{ prediction[0] }} </ul>
                   <ul > {{ prediction[1] }} vs {{ prediction[2] }} </ul>
                   <ul > {{ prediction[3] }} </ul>
                 </div>
               {% endfor %}
             </div>
+            <br><br>
             <h4> Total points: {{ stats[0] }} </h4>
             <br>
             <p> {{ captain[0] }} (C)     |     {{ captain[1] }} (VC) </p>
-            <br>
+            <br><br>
             <h3>Subs</h3>
-            <div class="subs" style='display: grid;  grid-template-columns: auto auto auto auto; grid-template-rows: 50px 50px; justify-content: center;'>
+            <div class="subs" style='display: grid;  grid-template-columns: auto auto auto auto; grid-template-rows: 100% 100%; justify-content: center;'>
               {% for prediction in subs %}
                 <div class="item"style='padding-left: 5px; padding-right: 5px;'>
-                  <ul > {{ prediction[4] }} </ul>
+                  <ul > <img src="{{ prediction[4] }}" alt=""> </ul>
                   <ul > {{ prediction[0] }} </ul>
                   <ul > {{ prediction[1] }} vs {{ prediction[2] }} </ul>
                   <ul > {{ prediction[3] }} </ul>
                 </div>
               {% endfor %}
             </div>
+            <br><br>
             <h4> Total points: {{ stats[1] }} </h4>
             <h3>Chips</h3>
-            <div class="chips" style='display: grid;  grid-template-columns: auto auto auto auto; grid-template-rows: 50px 50px; justify-content: center;'>
+            <div class="chips" style='display: grid;  grid-template-columns: auto auto auto auto; grid-template-rows: 100% 100%; justify-content: center;'>
               {% for chip in chips %}
                 <div class="item"style='padding-left: 5px; padding-right: 5px;'>
                   <ul > {{ chip['name'] }} => {{ chip['value'] }} </ul>

@@ -71,8 +71,9 @@ def main():
       #players['team_short_name'] = [return_prediction(players['id'].iloc[i],gameweek)['team_short_name'] for i in range(len(players))]
       #players['opponent_short_team_name'] = [return_prediction(players['id'].iloc[i],gameweek)['opponent_short_team_name'] for i in range(len(players))]
       #players['was_home'] = [return_prediction(players['id'].iloc[i],gameweek)['was_home'] for i in range(len(players))]
-
+      players['kit'] = ""
       for i in range(len(players)):
+        players['kit'].iloc[i] = f"https://raw.githubusercontent.com/jackculpan/mlfc/master/kits/{int(players['team_id'].iloc[i])}small.png"
         if players['chance_of_playing_next_round'].iloc[i] > 50:
           players['prediction'].iloc[i] = 0.0
         if players['was_home'].iloc[i] == True:
@@ -90,7 +91,6 @@ def main():
           vice_captain = players[players['id']==element].name.values[0]
           # players[players['id']==element]['name'] = str(players[players['id']==element].name.values[0] + " (VC)")
 
-    players['kit'] = ""
     subs = players.iloc[-4:].copy()
     cond = players['id'].isin(subs['id'])
     players.drop(players[cond].index, inplace = True)
@@ -127,6 +127,7 @@ def dreamteam():
   if flask.request.method == 'POST':
     gameweek = int(flask.request.form['gameweek'])
   return return_dreamteam(gameweek)
+
 
 
 def return_dreamteam(gameweek):
@@ -203,6 +204,7 @@ def return_dreamteam(gameweek):
     dreamteam_players = pd.concat(dreamteam_players)
 
     for i in range(len(dreamteam_players)):
+      dreamteam_players['kit'].iloc[i] = f"https://raw.githubusercontent.com/jackculpan/mlfc/master/kits/{int(dreamteam_players['team_id'].iloc[i])}small.png"
       if dreamteam_players['was_home'].iloc[i] == "True":
         dreamteam_players['team_short_name'].iloc[i]=str(dreamteam_players['team_short_name'].iloc[i]) + " (H)"
       if dreamteam_players['was_home'].iloc[i] == "False":
@@ -211,9 +213,10 @@ def return_dreamteam(gameweek):
         dreamteam_players['prediction'].iloc[i] = dreamteam_players['prediction'].iloc[i] * 2
 
     for i in range(len(subs)):
-      if subs['was_home'].iloc[i] == "True":
+      subs['kit'].iloc[i] = f"https://raw.githubusercontent.com/jackculpan/mlfc/master/kits/{int(subs['team_id'].iloc[i])}small.png"
+      if subs['was_home'].iloc[i] == True:
         subs['team_short_name'].iloc[i]=str(subs['team_short_name'].iloc[i]) + " (H)"
-      elif subs['was_home'].iloc[i] == "False":
+      elif subs['was_home'].iloc[i] == False:
         subs['opponent_short_team_name'].iloc[i]=str(subs['opponent_short_team_name'].iloc[i]) + " (H)"
 
     subs.sort_values(by=['element_type'], inplace=True)
@@ -236,16 +239,52 @@ def return_dreamteam(gameweek):
                                  strikers=(zip(strikers['name'], strikers['team_short_name'], strikers['opponent_short_team_name'], strikers['prediction'].round(), strikers['kit'])),\
                                  midfielders=(zip(midfielders['name'],midfielders['team_short_name'], midfielders['opponent_short_team_name'], midfielders['prediction'].round(), midfielders['kit'])), \
                                  defenders=(zip(defenders['name'], defenders['team_short_name'], defenders['opponent_short_team_name'], defenders['prediction'].round(), defenders['kit'])), \
-                                 goalkeepers=(zip(goalkeepers['name'], goalkeepers['team_short_name'], goalkeepers['opponent_short_team_name'],  goalkeepers['prediction'].round(), goalkeepers['kit'])),\
+                                 goalkeepers=(zip(goalkeepers['name'], goalkeepers['team_short_name'], goalkeepers['opponent_short_team_name'],  goalkeepers['prediction'].round(), goalkeepers['kit'])), \
                                  subs=(zip(subs['name'], subs['team_short_name'],subs['opponent_short_team_name'], subs['prediction'].round(), subs['kit'])),\
                                  stats=(team_points, sub_points, team_cost, sub_cost),\
                                  captain=(captains['web_name'].iloc[0], captains['web_name'].iloc[1]),
                                  )
 
-@app.route('/team', methods=['GET'])
+# @app.route('/team', methods=['GET'])
+# def team():
+#   if flask.request.method == 'GET':
+#     return(flask.render_template('team.html'))
+
+@app.route('/team', methods=['GET', 'POST'])
 def team():
+  teams_df = pd.read_csv("https://raw.githubusercontent.com/jackculpan/Fantasy-Premier-League/master/data/2019-20/teams.csv")
+
   if flask.request.method == 'GET':
-    return(flask.render_template('team.html'))
+    return(flask.render_template('player_select.html',
+                                  teams=(zip(teams_df['id'], teams_df['name']))))
+  if flask.request.method == 'POST':
+    dreamteam_players = pd.merge(latest_teams, players_raw, on='id')
+
+    gameweek = int(flask.request.form['gameweek'])
+    team = int(flask.request.form['team'])
+    #players = players[players['event']==gameweek]
+    #players = players[players['team_id']==team]
+    #players.sort_values(by='prediction')
+
+    collection = db["lstm_predictions_total"]
+    top_20 = pd.DataFrame(collection.find({"event":gameweek}))
+    top_20['id']=top_20['id'].astype(int)
+    dreamteam_players['id']=dreamteam_players['id'].astype(int)
+    top_20 = top_20[['id', 'event', 'opponent_short_team_name', 'prediction']]
+
+    dreamteam_players = [dreamteam_players[dreamteam_players['id'] == top_20['id'].iloc[i]] for i in range(len(top_20))]
+    dreamteam_players = pd.concat(dreamteam_players)
+
+    dreamteam_players = pd.merge(top_20, dreamteam_players, on='id')
+    dreamteam_players['prediction'] = pd.to_numeric(dreamteam_players['prediction'])
+
+    dreamteam_players = dreamteam_players.sort_values(by='prediction', ascending=False)
+    dreamteam_players = dreamteam_players[dreamteam_players['team_id'] == team]
+
+    return(flask.render_template('player_show.html',
+                                  teams=(zip(teams_df['id'], teams_df['name'])),
+                                  players=(zip(dreamteam_players['name'], dreamteam_players['prediction'])),
+                                  gameweek=(gameweek)))
 
 def authenticate(session, email, password):
   url = 'https://users.premierleague.com/accounts/login/'
