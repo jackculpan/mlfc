@@ -29,6 +29,9 @@ players_raw = pd.DataFrame(data['elements'])
 players_raw['chance_of_playing_next_round'].replace("None", 100, inplace=True)
 players_raw['chance_of_playing_next_round'] = pd.to_numeric(players_raw['chance_of_playing_next_round'])
 
+data = json.loads((requests.get('https://fantasy.premierleague.com/api/entry/502162/')).content)
+player_name = data['name']
+
 @app.route('/', methods=['GET', 'POST'])
 def main():
   session = requests.session()
@@ -48,6 +51,7 @@ def main():
     players = [latest_teams[latest_teams['id']==team_info['picks'][i]['element']] for i in range(len(team_info['picks']))]
     players = pd.concat(players)
     players = pd.merge(players, players_raw, on='id')
+    players['kit'] = ""
 
     if len(players) > 1:
       collection = db["lstm_predictions_total"]
@@ -58,23 +62,14 @@ def main():
           player = collection.find_one({"id":str(players['id'].iloc[i]), "event":gameweek})
           players['prediction'].iloc[i] = float(player['prediction'])
           players['opponent_short_team_name'].iloc[i] = player['opponent_short_team_name']
+        elif collection.find_one({"id":int(players['id'].iloc[i]), "event":gameweek}) != None:
+          player = collection.find_one({"id":int(players['id'].iloc[i]), "event":gameweek})
+          players['prediction'].iloc[i] = float(player['prediction'])
+          players['opponent_short_team_name'].iloc[i] = player['opponent_short_team_name']      #gw_players = [gw_players[gw_players['id'] == players['id'].iloc[i]] for i in range(len(players))]
 
-
-      #gw_players = [gw_players[gw_players['id'] == players['id'].iloc[i]] for i in range(len(players))]
-      #gw_players = pd.concat(gw_players)
-      #print(gw_players)
-      #players = pd.merge(players, gw_players[['id','was_home', 'team_short_name', 'opponent_short_team_name','prediction']], on='id', )
-
-      #players['prediction'] = pd.to_numeric(players['prediction'])
-
-      #players['prediction'] = [float(return_prediction(players['id'].iloc[i], gameweek)['prediction']) for i in range(len(players))]
-      #players['team_short_name'] = [return_prediction(players['id'].iloc[i],gameweek)['team_short_name'] for i in range(len(players))]
-      #players['opponent_short_team_name'] = [return_prediction(players['id'].iloc[i],gameweek)['opponent_short_team_name'] for i in range(len(players))]
-      #players['was_home'] = [return_prediction(players['id'].iloc[i],gameweek)['was_home'] for i in range(len(players))]
-      players['kit'] = ""
       for i in range(len(players)):
         players['kit'].iloc[i] = f"https://raw.githubusercontent.com/jackculpan/mlfc/master/kits/{int(players['team_id'].iloc[i])}small.png"
-        if players['chance_of_playing_next_round'].iloc[i] > 50:
+        if players['chance_of_playing_next_round'].iloc[i] <= 50:
           players['prediction'].iloc[i] = 0.0
         if players['was_home'].iloc[i] == True:
           players['team_short_name'].iloc[i]=str(players['team_short_name'].iloc[i]) + " (H)"
@@ -91,6 +86,8 @@ def main():
           vice_captain = players[players['id']==element].name.values[0]
           # players[players['id']==element]['name'] = str(players[players['id']==element].name.values[0] + " (VC)")
 
+
+
     subs = players.iloc[-4:].copy()
     cond = players['id'].isin(subs['id'])
     players.drop(players[cond].index, inplace = True)
@@ -106,17 +103,19 @@ def main():
     team_cost = sum(players.now_cost)/10
     sub_cost = sum(subs.now_cost)/10
 
+
     return flask.render_template('main.html',
                                  gameweek=(gameweek),
                                  original_input={'user_id':int(user_id), 'email':str(email),'password':str(password)},
-                                 strikers=(zip(strikers['name'], strikers['team_short_name'], strikers['opponent_short_team_name'], strikers['prediction'].round(), strikers['kit'])),\
-                                 midfielders=(zip(midfielders['name'],midfielders['team_short_name'], midfielders['opponent_short_team_name'], midfielders['prediction'].round(), midfielders['kit'])), \
-                                 defenders=(zip(defenders['name'], defenders['team_short_name'], defenders['opponent_short_team_name'], defenders['prediction'].round(), defenders['kit'])), \
-                                 goalkeepers=(zip(goalkeepers['name'], goalkeepers['team_short_name'], goalkeepers['opponent_short_team_name'],  goalkeepers['prediction'].round(), goalkeepers['kit'])),\
-                                 subs=(zip(subs['name'], subs['team_short_name'],subs['opponent_short_team_name'], subs['prediction'].round(), subs['kit'])),\
+                                 strikers=(zip(strikers['name'], strikers['team_short_name'], strikers['opponent_short_team_name'], strikers['prediction'].round(1), strikers['kit'])),\
+                                 midfielders=(zip(midfielders['name'],midfielders['team_short_name'], midfielders['opponent_short_team_name'], midfielders['prediction'].round(1), midfielders['kit'])), \
+                                 defenders=(zip(defenders['name'], defenders['team_short_name'], defenders['opponent_short_team_name'], defenders['prediction'].round(1), defenders['kit'])), \
+                                 goalkeepers=(zip(goalkeepers['name'], goalkeepers['team_short_name'], goalkeepers['opponent_short_team_name'],  goalkeepers['prediction'].round(1), goalkeepers['kit'])),\
+                                 subs=(zip(subs['name'], subs['team_short_name'],subs['opponent_short_team_name'], subs['prediction'].round(1), subs['kit'])),\
                                  stats=(team_points, sub_points, team_cost, sub_cost),\
                                  captain=(captain, vice_captain),
-                                 chips=(chips)
+                                 chips=(chips),
+                                 player_name=(player_name)
                                  )
 
 
@@ -236,11 +235,11 @@ def return_dreamteam(gameweek):
 
     return flask.render_template('dreamteam.html',
                                  gameweek=(gameweek),
-                                 strikers=(zip(strikers['name'], strikers['team_short_name'], strikers['opponent_short_team_name'], strikers['prediction'].round(), strikers['kit'])),\
-                                 midfielders=(zip(midfielders['name'],midfielders['team_short_name'], midfielders['opponent_short_team_name'], midfielders['prediction'].round(), midfielders['kit'])), \
-                                 defenders=(zip(defenders['name'], defenders['team_short_name'], defenders['opponent_short_team_name'], defenders['prediction'].round(), defenders['kit'])), \
-                                 goalkeepers=(zip(goalkeepers['name'], goalkeepers['team_short_name'], goalkeepers['opponent_short_team_name'],  goalkeepers['prediction'].round(), goalkeepers['kit'])), \
-                                 subs=(zip(subs['name'], subs['team_short_name'],subs['opponent_short_team_name'], subs['prediction'].round(), subs['kit'])),\
+                                 strikers=(zip(strikers['name'], strikers['team_short_name'], strikers['opponent_short_team_name'], strikers['prediction'].round(1), strikers['kit'])),\
+                                 midfielders=(zip(midfielders['name'],midfielders['team_short_name'], midfielders['opponent_short_team_name'], midfielders['prediction'].round(1), midfielders['kit'])), \
+                                 defenders=(zip(defenders['name'], defenders['team_short_name'], defenders['opponent_short_team_name'], defenders['prediction'].round(1), defenders['kit'])), \
+                                 goalkeepers=(zip(goalkeepers['name'], goalkeepers['team_short_name'], goalkeepers['opponent_short_team_name'],  goalkeepers['prediction'].round(1), goalkeepers['kit'])), \
+                                 subs=(zip(subs['name'], subs['team_short_name'],subs['opponent_short_team_name'], subs['prediction'].round(1), subs['kit'])),\
                                  stats=(team_points, sub_points, team_cost, sub_cost),\
                                  captain=(captains['web_name'].iloc[0], captains['web_name'].iloc[1]),
                                  )
@@ -283,7 +282,7 @@ def team():
 
     return(flask.render_template('player_show.html',
                                   teams=(zip(teams_df['id'], teams_df['name'])),
-                                  players=(zip(dreamteam_players['name'], dreamteam_players['prediction'])),
+                                  players=(zip(dreamteam_players['name'], dreamteam_players['prediction'].round(2))),
                                   gameweek=(gameweek)))
 
 def authenticate(session, email, password):

@@ -13,7 +13,9 @@
         <h1> MLFC - Predicting Fantasy Football with Machine Learning </h1>
         <h3> Jack Culpan | Student Number: 089004 </h3>
         <br>
-        <a href="/" class="href"><button>View your team</button> </a> <a href="/dreamteam" class="href"><button>View our dreamteam</button></a>
+        <a href="/" class="href"><button>View your team</button> </a>
+        <a href="/dreamteam" class="href"><button>View our dreamteam</button></a>
+        <a href="/team" class="href"><button>View team predictions</button></a>
         <br><br>
         <form action="{{ url_for('main') }}" method="POST">
           <fieldset>
@@ -38,7 +40,7 @@
           {% if strikers %}
           <div class="team" align='center' style="">
               <br>
-              <h2> Here's your team for gameweek {{ gameweek-9 }}+: </h2>
+              <h2> Here's {{ player_name }}'s team for gameweek {{ gameweek-9 }}+: </h2>
               <br>
             <div class="goalkeepers" style='display: grid;  grid-template-columns: auto; grid-template-rows: 100% 100%; justify-content: center; width:100%; height: 100%;'>
               {% for prediction in goalkeepers %}
