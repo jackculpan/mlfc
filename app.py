@@ -132,6 +132,7 @@ def dreamteam():
 def return_dreamteam(gameweek):
     dreamteam_players = pd.merge(latest_teams, players_raw, on='id')
 
+    #print(pd.read_csv(f"https://raw.githubusercontent.com/vaastav/Fantasy-Premier-League/master/data/2019-20/gws/gw{int(gameweek)}.csv"))
     #players = players[['id', 'prediction', 'opponent_short_team_name', 'team_code', 'web_name', 'team_short_name', '']]
 
     #print(players[['team_code', 'team_id']])
@@ -158,10 +159,18 @@ def return_dreamteam(gameweek):
     # print(latest_teams)
     collection = db["lstm_predictions_total"]
     top_20 = pd.DataFrame(collection.find({"event":gameweek}))
-    top_20['id']=top_20['id'].astype(int)
-    dreamteam_players['id']=dreamteam_players['id'].astype(int)
+    if isinstance(top_20['id'].iloc[0], int) != True:
+      top_20['id']=top_20['id'].astype(int)
+    #top_20['id'] = pd.to_numeric(top_20['id'], downcast='integer')
+    dreamteam_players['id']=dreamteam_players['id'].astype(float).astype(int)
     top_20 = top_20[['id', 'event', 'opponent_short_team_name', 'prediction']]
 
+    if requests.get(f"https://raw.githubusercontent.com/vaastav/Fantasy-Premier-League/master/data/2019-20/gws/gw{gameweek}.csv").status_code == 200:
+      actual_df = pd.read_csv(f"https://raw.githubusercontent.com/vaastav/Fantasy-Premier-League/master/data/2019-20/gws/gw{gameweek}.csv")
+      actual_df['id']=actual_df['element'].astype(float).astype(int)
+      dreamteam_players = pd.merge(actual_df[['id', 'total_points']], dreamteam_players, on='id')
+    else:
+      dreamteam_players['total_points'] = ""
 
     dreamteam_players = [dreamteam_players[dreamteam_players['id'] == top_20['id'].iloc[i]] for i in range(len(top_20))]
     dreamteam_players = pd.concat(dreamteam_players)
@@ -204,12 +213,18 @@ def return_dreamteam(gameweek):
 
     for i in range(len(dreamteam_players)):
       dreamteam_players['kit'].iloc[i] = f"https://raw.githubusercontent.com/jackculpan/mlfc/master/kits/{int(dreamteam_players['team_id'].iloc[i])}small.png"
-      if dreamteam_players['was_home'].iloc[i] == "True":
+      if dreamteam_players['was_home'].iloc[i] == True:
         dreamteam_players['team_short_name'].iloc[i]=str(dreamteam_players['team_short_name'].iloc[i]) + " (H)"
-      if dreamteam_players['was_home'].iloc[i] == "False":
+      if dreamteam_players['was_home'].iloc[i] == False:
         dreamteam_players['opponent_short_team_name'].iloc[i]=str(dreamteam_players['opponent_short_team_name'].iloc[i]) + " (H)"
       if dreamteam_players['web_name'].iloc[i] == captain_selection[0]:
         dreamteam_players['prediction'].iloc[i] = dreamteam_players['prediction'].iloc[i] * 2
+      if dreamteam_players['minutes_x'].iloc[i] <= 67:
+        dreamteam_players['prediction'].iloc[i] = dreamteam_players['prediction'].iloc[i] + 0.5
+      if dreamteam_players['minutes_x'].iloc[i] == 90:
+        dreamteam_players['prediction'].iloc[i] = dreamteam_players['prediction'].iloc[i] + 0.5
+
+
 
     for i in range(len(subs)):
       subs['kit'].iloc[i] = f"https://raw.githubusercontent.com/jackculpan/mlfc/master/kits/{int(subs['team_id'].iloc[i])}small.png"
@@ -217,6 +232,10 @@ def return_dreamteam(gameweek):
         subs['team_short_name'].iloc[i]=str(subs['team_short_name'].iloc[i]) + " (H)"
       elif subs['was_home'].iloc[i] == False:
         subs['opponent_short_team_name'].iloc[i]=str(subs['opponent_short_team_name'].iloc[i]) + " (H)"
+      if subs['minutes_x'].iloc[i] <= 67:
+        subs['prediction'].iloc[i] = subs['prediction'].iloc[i] + 1
+      if subs['minutes_x'].iloc[i] == 90:
+        subs['prediction'].iloc[i] = subs['prediction'].iloc[i] + 1
 
     subs.sort_values(by=['element_type'], inplace=True)
 
@@ -235,11 +254,11 @@ def return_dreamteam(gameweek):
 
     return flask.render_template('dreamteam.html',
                                  gameweek=(gameweek),
-                                 strikers=(zip(strikers['name'], strikers['team_short_name'], strikers['opponent_short_team_name'], strikers['prediction'].round(1), strikers['kit'])),\
-                                 midfielders=(zip(midfielders['name'],midfielders['team_short_name'], midfielders['opponent_short_team_name'], midfielders['prediction'].round(1), midfielders['kit'])), \
-                                 defenders=(zip(defenders['name'], defenders['team_short_name'], defenders['opponent_short_team_name'], defenders['prediction'].round(1), defenders['kit'])), \
-                                 goalkeepers=(zip(goalkeepers['name'], goalkeepers['team_short_name'], goalkeepers['opponent_short_team_name'],  goalkeepers['prediction'].round(1), goalkeepers['kit'])), \
-                                 subs=(zip(subs['name'], subs['team_short_name'],subs['opponent_short_team_name'], subs['prediction'].round(1), subs['kit'])),\
+                                 strikers=(zip(strikers['name'], strikers['team_short_name'], strikers['opponent_short_team_name'], strikers['prediction'].round(1), strikers['kit'], strikers['total_points'])),\
+                                 midfielders=(zip(midfielders['name'],midfielders['team_short_name'], midfielders['opponent_short_team_name'], midfielders['prediction'].round(1), midfielders['kit'], midfielders['total_points'])), \
+                                 defenders=(zip(defenders['name'], defenders['team_short_name'], defenders['opponent_short_team_name'], defenders['prediction'].round(1), defenders['kit'], defenders['total_points'])), \
+                                 goalkeepers=(zip(goalkeepers['name'], goalkeepers['team_short_name'], goalkeepers['opponent_short_team_name'],  goalkeepers['prediction'].round(1), goalkeepers['kit'], goalkeepers['total_points'])), \
+                                 subs=(zip(subs['name'], subs['team_short_name'],subs['opponent_short_team_name'], subs['prediction'].round(1), subs['kit'], subs['total_points'])),\
                                  stats=(team_points, sub_points, team_cost, sub_cost),\
                                  captain=(captains['web_name'].iloc[0], captains['web_name'].iloc[1]),
                                  )
@@ -307,7 +326,7 @@ def return_name(player):
 
 from pulp import *
 
-def select_team(expected_scores, prices, positions, clubs, total_budget=100, sub_factor=0.2):
+def select_team(expected_scores, prices, positions, clubs, total_budget=100, sub_factor=0.15):
     num_players = len(expected_scores)
     model = LpProblem("Constrained value maximisation", LpMaximize)
     decisions = [
