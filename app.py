@@ -122,7 +122,8 @@ def main():
 @app.route('/dreamteam', methods=['GET', 'POST'])
 def dreamteam():
   if flask.request.method == 'GET':
-    gameweek = get_recent_gameweek_id()
+    #gameweek = get_recent_gameweek_id()
+    gameweek = 47
   if flask.request.method == 'POST':
     gameweek = int(flask.request.form['gameweek'])
   return return_dreamteam(gameweek)
