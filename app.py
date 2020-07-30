@@ -29,8 +29,7 @@ players_raw = pd.DataFrame(data['elements'])
 players_raw['chance_of_playing_next_round'].replace("None", 100, inplace=True)
 players_raw['chance_of_playing_next_round'] = pd.to_numeric(players_raw['chance_of_playing_next_round'])
 
-data = json.loads((requests.get('https://fantasy.premierleague.com/api/entry/502162/')).content)
-player_name = data['name']
+
 
 @app.route('/', methods=['GET', 'POST'])
 def main():
@@ -44,7 +43,8 @@ def main():
     user_id = flask.request.form['user_id']
     gameweek = int(flask.request.form['gameweek'])
     session = authenticate(session, email, password)
-
+    data = json.loads((requests.get(f'https://fantasy.premierleague.com/api/entry/{user_id}/')).content)
+    player_name = data['name']
     team_info = get_team(session, user_id)
     chips = [{"name":team_info['chips'][i]['name'], "value":team_info['chips'][i]['status_for_entry']} for i in range(len(team_info['chips']))]
 
@@ -69,8 +69,8 @@ def main():
 
       for i in range(len(players)):
         players['kit'].iloc[i] = f"https://raw.githubusercontent.com/jackculpan/mlfc/master/kits/{int(players['team_id'].iloc[i])}small.png"
-        if players['chance_of_playing_next_round'].iloc[i] <= 50:
-          players['prediction'].iloc[i] = 0.0
+        #if players['chance_of_playing_next_round'].iloc[i] <= 50:
+          #players['prediction'].iloc[i] = 0.0
         if players['was_home'].iloc[i] == True:
           players['team_short_name'].iloc[i]=str(players['team_short_name'].iloc[i]) + " (H)"
         if players['was_home'].iloc[i] == False:
@@ -78,6 +78,7 @@ def main():
         if team_info['picks'][i]['is_captain'] == True:
           element = team_info['picks'][i]['element']
           captain = players[players['id']==element].name.values[0]
+          players['prediction'].iloc[i] = players['prediction'].iloc[i] * 2
           # print(players[players['id']==element].name.values[0]+ " (C)")
           # players[players['id']==element].name = players[players['id']==element].name.values[0] + " (C)"
         elif team_info['picks'][i]['is_vice_captain'] == True:
@@ -103,7 +104,7 @@ def main():
     team_cost = sum(players.now_cost)/10
     sub_cost = sum(subs.now_cost)/10
 
-
+    print(players)
     return flask.render_template('main.html',
                                  gameweek=(gameweek),
                                  original_input={'user_id':int(user_id), 'email':str(email),'password':str(password)},
@@ -183,8 +184,8 @@ def return_dreamteam(gameweek):
     # print(f"gameweek ={gameweek}=")
     #print(players)
     dreamteam_players['kit'] = ""
-    dreamteam_players = dreamteam_players[dreamteam_players['minutes_x'].values>0]
-    dreamteam_players = dreamteam_players[dreamteam_players['chance_of_playing_next_round'].values > 50]
+    dreamteam_players = dreamteam_players[dreamteam_players['minutes_x'].values>=65.0]
+    dreamteam_players = dreamteam_players[dreamteam_players['chance_of_playing_next_round'].values>=100.0]
     dreamteam_players= dreamteam_players.reset_index()
     # print(dreamteam_players)
 
@@ -218,12 +219,10 @@ def return_dreamteam(gameweek):
         dreamteam_players['team_short_name'].iloc[i]=str(dreamteam_players['team_short_name'].iloc[i]) + " (H)"
       if dreamteam_players['was_home'].iloc[i] == False:
         dreamteam_players['opponent_short_team_name'].iloc[i]=str(dreamteam_players['opponent_short_team_name'].iloc[i]) + " (H)"
-      if dreamteam_players['web_name'].iloc[i] == captain_selection[0]:
-        dreamteam_players['prediction'].iloc[i] = dreamteam_players['prediction'].iloc[i] * 2
-      if dreamteam_players['minutes_x'].iloc[i] <= 67:
-        dreamteam_players['prediction'].iloc[i] = dreamteam_players['prediction'].iloc[i] + 0.5
-      if dreamteam_players['minutes_x'].iloc[i] == 90:
-        dreamteam_players['prediction'].iloc[i] = dreamteam_players['prediction'].iloc[i] + 0.5
+      # if dreamteam_players['minutes_x'].iloc[i] <= 67:
+      #   dreamteam_players['prediction'].iloc[i] = dreamteam_players['prediction'].iloc[i] + 0.5
+      # if dreamteam_players['minutes_x'].iloc[i] == 90:
+      #   dreamteam_players['prediction'].iloc[i] = dreamteam_players['prediction'].iloc[i] + 0.5
 
 
 
@@ -253,6 +252,12 @@ def return_dreamteam(gameweek):
     team_cost = sum(dreamteam_players.now_cost)/10
     sub_cost = sum(subs.now_cost)/10
 
+    actual_points = int(sum(dreamteam_players.total_points))
+    if team_points < actual_points:
+      percent = (team_points / actual_points)*100
+    else:
+      percent = (actual_points / team_points)*100
+
     return flask.render_template('dreamteam.html',
                                  gameweek=(gameweek),
                                  strikers=(zip(strikers['name'], strikers['team_short_name'], strikers['opponent_short_team_name'], strikers['prediction'].round(1), strikers['kit'], strikers['total_points'])),\
@@ -260,7 +265,7 @@ def return_dreamteam(gameweek):
                                  defenders=(zip(defenders['name'], defenders['team_short_name'], defenders['opponent_short_team_name'], defenders['prediction'].round(1), defenders['kit'], defenders['total_points'])), \
                                  goalkeepers=(zip(goalkeepers['name'], goalkeepers['team_short_name'], goalkeepers['opponent_short_team_name'],  goalkeepers['prediction'].round(1), goalkeepers['kit'], goalkeepers['total_points'])), \
                                  subs=(zip(subs['name'], subs['team_short_name'],subs['opponent_short_team_name'], subs['prediction'].round(1), subs['kit'], subs['total_points'])),\
-                                 stats=(team_points, sub_points, team_cost, sub_cost),\
+                                 stats=(team_points, sub_points, team_cost, sub_cost,actual_points, round(percent, 2)),\
                                  captain=(captains['web_name'].iloc[0], captains['web_name'].iloc[1]),
                                  )
 
@@ -327,7 +332,7 @@ def return_name(player):
 
 from pulp import *
 
-def select_team(expected_scores, prices, positions, clubs, total_budget=100, sub_factor=0.15):
+def select_team(expected_scores, prices, positions, clubs, total_budget=100, sub_factor=0.2):
     num_players = len(expected_scores)
     model = LpProblem("Constrained value maximisation", LpMaximize)
     decisions = [
