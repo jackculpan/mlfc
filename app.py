@@ -185,7 +185,7 @@ def return_dreamteam(gameweek):
     #print(players)
     dreamteam_players['kit'] = ""
     dreamteam_players = dreamteam_players[dreamteam_players['minutes_x'].values>=65.0]
-    dreamteam_players = dreamteam_players[dreamteam_players['chance_of_playing_next_round'].values>=100.0]
+    # dreamteam_players = dreamteam_players[dreamteam_players['chance_of_playing_next_round'].values>=100.0]
     dreamteam_players= dreamteam_players.reset_index()
     # print(dreamteam_players)
 
